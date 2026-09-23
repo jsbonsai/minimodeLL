@@ -1,0 +1,17 @@
+name: macOS validation
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+      - run: swift test
+      - run: swift run minimodell-diagnostics --config Config/local.example.json
+      - run: swift run minimodell-diagnostics --config Config/enterprise.example.json
+      - run: scripts/package-app.sh
+      - run: scripts/make-profile.py Config/enterprise.example.json build/minimodell.mobileconfig
+      - run: plutil -lint build/minimodell.mobileconfig
