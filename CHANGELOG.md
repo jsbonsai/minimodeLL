@@ -20,3 +20,7 @@ No production release has been published. Version 0.1.0 identifies the current d
 
 - Local inference still requires an external llama-server and separately obtained model.
 - Live service/OAuth qualification, transport hardening, exact token counting, hardware benchmarks and production signing/notarization remain open work.
+
+### Fixed
+
+- Fake-inference unit fixtures no longer assume a 16 GB CI machine; a dedicated test covers physical-memory admission separately.

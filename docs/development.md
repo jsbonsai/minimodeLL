@@ -13,7 +13,7 @@ swift package resolve
 swift test
 ```
 
-The XCTest wrapper can print “Executed 0 tests” before Swift Testing runs. Read the final Swift Testing summary; the baseline has 15 tests. Do not interpret that wrapper line as no tests having run.
+The XCTest wrapper can print “Executed 0 tests” before Swift Testing runs. Read the final Swift Testing summary; the baseline has 16 tests. Do not interpret that wrapper line as no tests having run.
 
 ## Build and run modes
 

@@ -117,3 +117,18 @@ func runnerAudit() -> (AuditLog, URL) {
     }
     #expect(await inference.requests == 0)
 }
+
+@Test func insufficientPhysicalMemoryBlocksLocalInference() async throws {
+    let (audit, url) = runnerAudit(); defer { try? FileManager.default.removeItem(at: url) }
+    let inference = FakeInference([])
+    let configuration = try config { json in
+        var models = json["models"] as! [[String: Any]]
+        models[0]["minimumMemoryGB"] = Int(ProcessInfo.processInfo.physicalMemory / 1_073_741_824) + 1
+        json["models"] = models
+    }
+    let runner = TaskRunner(inference: inference, tools: FakeTools(), audit: audit)
+    await #expect(throws: (any Error).self) {
+        try await runner.run(input: "Hello", modelID: "local-approved", configuration: configuration, approve: { _ in true })
+    }
+    #expect(await inference.requests == 0)
+}

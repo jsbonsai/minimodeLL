@@ -1,8 +1,10 @@
 # Ordered implementation backlog
 
-Last reviewed: 2026-09-23. These are future work unless explicitly marked otherwise. GitHub issue links are added during repository bootstrap. The handoff identifies the active task; do not interpret every item as authorization to ship a production release immediately.
+Last reviewed: 2026-09-23. These are future work unless explicitly marked otherwise. GitHub issues below track the corresponding work items. The handoff identifies the active task; do not interpret every item as authorization to ship a production release immediately.
 
 ## WORK-001 — Own a pinned local runtime lifecycle
+
+Tracking: https://github.com/jsbonsai/minimodeLL/issues/1
 
 Priority: first. Status: open. Dependencies: existing provider boundary and packaging.
 
@@ -12,6 +14,8 @@ Done means the packaged app can run a known synthetic prompt with an approved lo
 
 ## WORK-002 — Verified model artifacts and approved catalog management
 
+Tracking: https://github.com/jsbonsai/minimodeLL/issues/2
+
 Priority: next. Status: open. Depends on WORK-001's runtime/model boundary.
 
 Extend stubs into a versioned artifact manifest: source, file size/hash, quantization, license, template identity, runtime compatibility and measured memory/context settings. Add verified installation/import, resumable approved-source downloads, atomic promotion, cancellation, disk-space checks, deletion and rollback. Keep display names separate from identity. Support user installations and separately provisioned managed read-only artifacts without world-writable shared directories.
@@ -19,6 +23,8 @@ Extend stubs into a versioned artifact manifest: source, file size/hash, quantiz
 Done means corrupted/unapproved artifacts cannot be selected and a catalog can change through ordinary config/MDM without a source rebuild. Benchmark approval remains distinct from file integrity.
 
 ## WORK-003 — Bound transport memory and prove cancellation behavior
+
+Tracking: https://github.com/jsbonsai/minimodeLL/issues/3
 
 Priority: security gate before real-service rollout. Status: open. Can precede WORK-001 if implementation work focuses on transport safety.
 
@@ -28,6 +34,8 @@ Done means deterministic HTTP/MCP fixture tests demonstrate bounded memory/read 
 
 ## WORK-004 — Qualify baseline MCP services and OAuth
 
+Tracking: https://github.com/jsbonsai/minimodeLL/issues/4
+
 Priority: before company pilot. Status: blocked on service details/test accounts. Depends on WORK-003 for hardened transport.
 
 Inventory Gmail, Calendar, Atlassian and Slack endpoints, actual transports, native public-client registration, callback/scopes, tool schemas and read/write permissions. Validate sign-in, refresh, reauthentication, revoked scopes, expired tokens and endpoint changes. Implement logout/revocation and user-visible token persistence failures. Expand schema support through a maintained validator or tested additions; do not ignore constraints. Address structured tool results or legacy SSE only when the actual services require them.
@@ -35,6 +43,8 @@ Inventory Gmail, Calendar, Atlassian and Slack endpoints, actual transports, nat
 Done means each service has a content-safe reproducible validation record and selected read-only tasks pass. Live credentials stay outside Git and issues. Sending/writing through real employee accounts requires applicable task authorization.
 
 ## WORK-005 — Exact context budgets and fleet model qualification
+
+Tracking: https://github.com/jsbonsai/minimodeLL/issues/5
 
 Priority: before hardware support claims. Status: open. Depends on WORK-001/002 and representative service fixtures.
 
@@ -44,6 +54,8 @@ Done means support profiles are measured and reproducible, with content-free rep
 
 ## WORK-006 — Validate Jamf, maintain best-effort Kandji, and qualify packaging
 
+Tracking: https://github.com/jsbonsai/minimodeLL/issues/6
+
 Priority: before enterprise pilot/public binaries. Status: open. Depends on runtime packaging and access to signing/MDM test environment.
 
 Use the owner/coworker Jamf sandbox for the first focused enrolled-device run (docs/jamf-test-plan.md). Maintain the same artifacts and an explicitly unvalidated Kandji path (docs/kandji.md); do not claim tenant testing without access. Validate forced-policy precedence, malformed policy, policy removal, version migration, sandboxed preferences and changes during a task on enrolled Macs. Test root diagnostics versus user-session behavior. Produce Developer ID signed, notarized/stapled DMG and PKG; validate install/update/rollback/uninstall on clean Macs. Verify nested runtime signatures and resource access. Define update strategy and required OS/CPU support.
@@ -52,6 +64,8 @@ Done means recorded clean-machine and enrolled-device evidence exists. A profile
 
 ## WORK-007 — Audit provenance and actionable failure outcomes
 
+Tracking: https://github.com/jsbonsai/minimodeLL/issues/7
+
 Priority: before enterprise audit claims. Status: open.
 
 Version the audit schema; add policy/artifact/runtime provenance, duration, normalized failure classes, actor/session context with privacy review, and uncertain-action outcomes. Preserve no content/token logging. Test file permission/rotation/write failures and concurrent/cancel paths. Document central collection/export as opt-in with destination/retention constraints; no default telemetry upload.
@@ -59,6 +73,8 @@ Version the audit schema; add policy/artifact/runtime provenance, duration, norm
 Done means operators can explain which approved policy/model/tool produced an outcome without collecting prompts or service content. Do not call local files immutable.
 
 ## WORK-008 — Product polish and accessible configuration
+
+Tracking: https://github.com/jsbonsai/minimodeLL/issues/8
 
 Priority: after a working local runtime flow. Status: open.
 

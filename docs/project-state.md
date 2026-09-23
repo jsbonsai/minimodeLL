@@ -21,7 +21,7 @@ The app name is minimodeLL. It must remain easy to rename. The standalone app co
 | Credentials | Keychain generic passwords, no synchronization requested | Code/build review | Stable Developer ID signing and persistence failure UX |
 | Policy | Versioned Codable JSON; forced MDM policy replaces user config | Validator tests and generated profile lint | Actual enrolled-device forced preference behavior |
 | Catalog | Approved provider/model stubs with RAM/context requirements | Validator and diagnostics | Verified artifacts, manifests, downloads, template hashes and licensing |
-| Execution safeguards | Input/context/output/step/result/time limits; tool schemas and approvals | 15 tests across policy/runner/audit | Exact token counting, transport memory limits, pressure-aware admission |
+| Execution safeguards | Input/context/output/step/result/time limits; tool schemas and approvals | 16 tests across policy/runner/audit | Exact token counting, transport memory limits, pressure-aware admission |
 | Audit | Metadata JSONL and OSLog, bounded local retention | Payload-shape and write-failure tests; fixture run | Richer provenance/outcome events and optional central export |
 | Diagnostics | CLI policy validation, RAM/OS, eligible model IDs | Both examples pass on development Mac | Connectivity or performance qualification runner |
 | Packaging | Ad-hoc sandboxed .app; DMG/PKG scripts | .app signature and launch verified | DMG/PKG install, Developer ID, notarization, clean-machine checks |

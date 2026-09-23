@@ -5,6 +5,10 @@ import MCP
 
 func config(_ transform: (inout [String: Any]) -> Void = { _ in }) throws -> AgentConfiguration {
     var json = try JSONSerialization.jsonObject(with: Data(AgentConfiguration.starterJSON.utf8)) as! [String: Any]
+    // Fake inference does not load weights. Do not require a hosted CI machine to have model RAM.
+    var models = json["models"] as! [[String: Any]]
+    models[0]["minimumMemoryGB"] = 0
+    json["models"] = models
     transform(&json)
     return try ConfigurationLoader.decode(JSONSerialization.data(withJSONObject: json))
 }

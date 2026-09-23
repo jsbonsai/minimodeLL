@@ -24,4 +24,9 @@ Official Kandji documentation also notes its Iru migration; the guide records th
 
 ## Completion record
 
-Pending repository creation, commit/push, issue links and hosted CI outcome. Do not treat the stated intent above as proof of completion.
+- Created public repository https://github.com/jsbonsai/minimodeLL and pushed foundation commit `283ad43` to main.
+- Created issues #1–#8 and linked them from the backlog. Added repository topics for discovery.
+- Reviewed staged paths, checked local Markdown links and scanned credential-like patterns; no matching credentials were found. Normalized whitespace in the historical PRDs so the staged diff check passes.
+- Initial hosted CI run: https://github.com/jsbonsai/minimodeLL/actions/runs/35936009136 (in progress at this checkpoint).
+- Found a portability concern while reviewing CI: fake inference tests inherited the starter model's 16 GB hardware requirement. Changed only the test fixture to a zero-memory fake model, and added a separate regression test requiring more than the executing machine's physical RAM. Production model requirements are unchanged.
+- Added the shared MDM readiness script to CI. All 16 tests passed locally. CI skips Markdown-only changes and has a 15-minute job timeout; the final hosted result is recorded below when available.

@@ -1,6 +1,6 @@
 # Agent handoff — read this first
 
-Last updated: 2026-09-23. Current work: durable documentation and GitHub bootstrap after initial developer preview.
+Last updated: 2026-09-23. Current work: documentation and GitHub bootstrap completed; checking hosted CI and recording its outcome.
 
 ## Owner instructions that persist
 
@@ -12,9 +12,9 @@ The owner's available fleet is M1 Pro 32 GB (development), M2 Max 64 GB, M1 Pro 
 
 The first implementation is a native developer preview. It includes app/UI, configuration/policy, provider/MCP adapters, Keychain/OAuth wiring, bounded tool loop, local metadata audit, tests, diagnostics and packaging scaffolding. It is **not yet self-contained**: no inference runtime or model is bundled. No company integration is configured or live validated. Read `project-state.md` for the complete capability/limitation matrix.
 
-The implementation was locally validated with 15 tests and an explicitly labeled mock HTTP response from the sandboxed app. There is no real model benchmark, live LiteLLM/MCP/OAuth evidence, or real Jamf enrollment evidence. DMG/PKG scripts exist but production signing/notarization/installation is pending.
+The implementation was locally validated with 16 tests and an explicitly labeled mock HTTP response from the sandboxed app. There is no real model benchmark, live LiteLLM/MCP/OAuth evidence, or real Jamf enrollment evidence. DMG/PKG scripts exist but production signing/notarization/installation is pending.
 
-Repository bootstrap: authenticated owner `jsbonsai`; intended public repository `jsbonsai/minimodeLL`. The latest session record will state the actual push, issue and CI results after they occur. Inspect `git remote -v`, `git log` and `gh run list` rather than treating this paragraph as evidence that a network action succeeded.
+Public repository: https://github.com/jsbonsai/minimodeLL. Foundation commit `283ad43` was pushed to `main`, with `origin` tracking the GitHub repository. Issues #1–#8 track WORK-001 through WORK-008. The initial hosted CI run is https://github.com/jsbonsai/minimodeLL/actions/runs/35936009136; it was running when this checkpoint was written. A follow-up commit makes fake-inference tests independent of hosted-runner RAM and adds a dedicated memory admission regression test. Check the latest session completion record and `gh run list` for the final observed CI result.
 
 ## Resume sequence
 
