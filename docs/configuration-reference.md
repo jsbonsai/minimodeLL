@@ -22,6 +22,7 @@ All fields below are required unless identified as optional in their nested obje
 | `models` | array | At least one approved model stub |
 | `mcpServers` | array | May be empty; defines permitted remote service connections |
 | `limits` | object | Bounded task execution settings |
+| `modelCatalog` | object, **optional** | Approved model artifacts and download hosts (below). Absent: the built-in catalog |
 
 Provider, model and MCP server IDs must each be unique within their collection and match `[A-Za-z0-9_-]{1,64}`. Cross-collection reuse is allowed. Unknown JSON keys are currently ignored by Codable, so do not rely on decoding to catch every typo. Future schema evolution should specify migrations and unknown-key handling.
 
@@ -45,7 +46,8 @@ A missing configured credential fails the run. Omitting `credentialAccount` send
 
 | Field | Required | Default | Accepted | Meaning |
 | --- | --- | --- | --- | --- |
-| `modelFile` | yes | — | `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\.gguf$`, no `..` | GGUF file name inside the app's `Models` folder. Not a path |
+| `artifact` | one of `artifact`/`modelFile` | — | `^[A-Za-z0-9_.-]{1,64}$`, must exist in the effective model catalog | Approved artifact ID. The file must pass size + SHA-256 verification before launch (ADR 0009). **Recommended** |
+| `modelFile` | one of `artifact`/`modelFile` | — | `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\.gguf$`, no `..` | Legacy (ADR 0008): GGUF file name inside the app's `Models` folder, used **without** hash verification. Not a path. Kept for backward compatibility and development smoke tests |
 | `parallel` | no | 1 | 1–4 | llama-server `--parallel` slots |
 | `startupTimeoutSeconds` | no | 120 | 5–600 | Time allowed for authenticated readiness before `failed` |
 | `idleUnloadSeconds` | no | 900 | 0 or 60–86,400 | Stop the runtime after this long with no inference in progress; 0 never unloads |
@@ -53,17 +55,20 @@ A missing configured credential fails the run. Omitting `credentialAccount` send
 Rules and behavior:
 
 - Exactly one model stub must reference a `managed` provider. Its `model` value becomes the server `--alias`; `contextTokens × parallel` becomes `--ctx-size`, so each slot receives the stub's `contextTokens`. `minimumMemoryGB` is enforced as for `local`.
-- The `Models` folder is `<Application Support>/<bundle id>/Models`. For the packaged, sandboxed app that is `~/Library/Containers/org.minimodell.agent/Data/Library/Application Support/org.minimodell.agent/Models/`. A symlink to a file outside the container is not readable by the sandboxed helper (verified). User-selected imports, hashes and catalogs are WORK-002.
+- Exactly one of `artifact` or `modelFile` must be set. With `artifact`, the model stub's `contextTokens` must not exceed the artifact's approved `contextTokens`, and its `minimumMemoryGB` must be at least the artifact's `minimumMemoryGB`. At launch the artifact's `runtimeTags` must include the bundled runtime tag, and the file must be verified, or the runtime refuses to start.
+- The `Models` folder is `<Application Support>/<bundle id>/Models`. For the packaged, sandboxed app that is `~/Library/Containers/org.minimodell.agent/Data/Library/Application Support/org.minimodell.agent/Models/`. A symlink to a file outside the container is not readable by the sandboxed helper (verified). Use Settings → Models → Download or Import to place a verified artifact there.
 - The runtime requires a packaged app built after `scripts/fetch-runtime.sh`. `swift run minimodell` has no bundled helper, so a `managed` model fails with "This build does not include the bundled local runtime."
 - The runtime starts lazily on the first inference call of a task; startup time counts against `limits.timeoutSeconds`. A crash or failed readiness surfaces as a task error and a UI state. There is no automatic restart in the background and never a cloud fallback.
-- Changing `modelFile`, `parallel`, `contextTokens` or `model` restarts the runtime at the next task. Removing every `managed` provider stops it at the next reload.
+- Changing `artifact`, `modelFile`, `parallel`, `contextTokens` or `model` restarts the runtime at the next task. Removing every `managed` provider stops it at the next reload.
 
 Example (`Config/bundled-runtime.example.json`):
 
 ```json
 {"id": "bundled", "kind": "managed",
- "runtime": {"modelFile": "approved-model.gguf", "parallel": 1, "startupTimeoutSeconds": 120, "idleUnloadSeconds": 900}}
+ "runtime": {"artifact": "qwen3-4b-instruct-2507-q4_k_m", "parallel": 1, "startupTimeoutSeconds": 120, "idleUnloadSeconds": 900}}
 ```
+
+Legacy form, still accepted: `"runtime": {"modelFile": "SmolLM2-135M-Instruct-Q8_0.gguf"}`.
 
 Migration: schema version stays `1`. Existing configurations are unchanged and still valid; `baseURL` became optional only for the new `managed` kind. Older app builds reject a policy that contains `"kind": "managed"` (unknown enum value), so do not push a managed provider through MDM to Macs running a build without this change. Forced managed policy may use `managed` like any other provider; users cannot add one to a forced policy.
 
@@ -78,7 +83,76 @@ Migration: schema version stays `1`. Existing configurations are unchanged and s
 | `minimumMemoryGB` | yes | Nonnegative total physical memory threshold; enforced for local models |
 | `contextTokens` | yes | 2,048–131,072; must exceed output token limit |
 
-`minimumMemoryGB` uses bytes divided by 1,073,741,824. It does not reserve memory or account for other applications. A cloud model is not subject to local model-memory eligibility. A stub currently has no file URL, checksum, quantization, template, license or runtime revision. Those belong to upcoming artifact management.
+`minimumMemoryGB` uses bytes divided by 1,073,741,824. It does not reserve memory or account for other applications. A cloud model is not subject to local model-memory eligibility. A stub has no file URL, checksum, quantization, template, license or runtime revision; for the bundled runtime those live in the model artifact the provider's `runtime.artifact` references (below). Display names (`title`, `displayName`) are presentation only; IDs are identity.
+
+## Model catalog object (`modelCatalog`, optional)
+
+Authoritative implementation: `Sources/LocalAgentCore/ModelCatalog.swift` (ADR 0009). The app has a built-in catalog (`catalogVersion` `2026-09-23.1`). Each field present in `modelCatalog` replaces the matching built-in value, and each absent field keeps it.
+
+| Field | Required | Default | Meaning |
+| --- | --- | --- | --- |
+| `approvedHosts` | no | `["huggingface.co", "hf.co"]` | 1–16 lowercase DNS names. An artifact `sourceURL` and every download redirect must use one of these hosts or a subdomain of one. No wildcards |
+| `allowDownloads` | no | `true` | `false`: artifacts can only be imported from a local file (still size- and hash-verified) |
+| `artifacts` | no | built-in list | Replaces the built-in artifacts entirely: at most 32, with unique `id`s and unique `fileName`s (case-insensitive) |
+
+### Artifact object
+
+| Field | Required | Constraints | Meaning |
+| --- | --- | --- | --- |
+| `id` | yes | `^[A-Za-z0-9_.-]{1,64}$` | Stable identity referenced by `runtime.artifact` |
+| `displayName` | yes | 1–80 characters | Presentation only |
+| `sourceURL` | yes | HTTPS; no credentials, query string or fragment; approved host | Download location. Pin an immutable revision (for Hugging Face, `/resolve/<commit>/`, not `/resolve/main/`) |
+| `fileName` | yes | plain `.gguf` name, no path | Name of the verified file in the `Models` folder |
+| `sizeBytes` | yes | 1 byte–64 GiB | Exact size; checked before hashing and while downloading |
+| `sha256` | yes | 64 lowercase hex characters | SHA-256 of the whole file |
+| `quantization` | yes | nonempty | e.g. `Q4_K_M` |
+| `license` | yes | nonempty (SPDX identifier) | License of the weights |
+| `licenseURL` | no | HTTPS | Where the license text is |
+| `chatTemplate` | yes | nonempty | Template identity and tool-call notes |
+| `runtimeTags` | yes | nonempty list of `^[A-Za-z0-9._-]{1,32}$` | Bundled llama.cpp tags the artifact was checked with. The runtime refuses any other tag |
+| `minimumMemoryGB` | yes | 1–512 | Minimum physical memory. A model stub may require more, never less |
+| `contextTokens` | yes | 2,048–1,048,576 | Largest approved context. A model stub may use less, never more |
+
+Built-in artifact: `qwen3-4b-instruct-2507-q4_k_m`, Qwen3-4B-Instruct-2507 Q4_K_M (Apache-2.0). The source is `bartowski/Qwen_Qwen3-4B-Instruct-2507-GGUF` at revision `ae44f08e…`: 2,497,280,736 bytes, SHA-256 `2fde00ce…bca4464e`, runtime `b11140`, 16 GB minimum memory, 8,192 context. This is a developer-preview default measured on one machine, not a support claim (see `docs/validation-results.md`).
+
+Store behavior (`ModelStore.swift`):
+
+- Downloads land in `Models/.partial/<id>.part`. An HTTP Range request resumes them after a network interruption.
+- A download needs the remaining bytes plus 512 MiB free.
+- A file is promoted to `Models/<fileName>` by an atomic rename, and only after its size and SHA-256 match.
+- The verification record in `Models/.verified/<id>.json` ties the hash to the file's size, inode and modification time. A promoted file that changed is hashed again before use and refused if it no longer matches.
+- Cancel removes the partial file. An unapproved redirect, an HTTP error, an oversized body, or a size or hash mismatch also discards it.
+- Import copies the selected file into `.partial` and hashes the copy before promoting it.
+
+Validation fails closed:
+
+- A catalog with an invalid host, hash, size, URL or duplicate is rejected as a whole. The app does not fall back to the built-in catalog.
+- A `runtime.artifact` missing from the effective catalog is rejected.
+- A forced managed `PolicyJSON` replaces the whole configuration, catalog included, so users cannot add artifacts or hosts to it.
+
+Example: an organization-approved catalog with downloads disabled and only one artifact allowed:
+
+```json
+"modelCatalog": {
+  "approvedHosts": ["models.example.com"],
+  "allowDownloads": false,
+  "artifacts": [{
+    "id": "org-qwen3-4b", "displayName": "Qwen3 4B (IT approved)",
+    "sourceURL": "https://models.example.com/qwen3/ae44f08e/Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+    "fileName": "Qwen_Qwen3-4B-Instruct-2507-Q4_K_M.gguf", "sizeBytes": 2497280736,
+    "sha256": "2fde00ce69dd4899c70d020845e2638353015bba0fdf161b3eb965f2bca4464e",
+    "quantization": "Q4_K_M", "license": "Apache-2.0", "chatTemplate": "Embedded Qwen3 ChatML template",
+    "runtimeTags": ["b11140"], "minimumMemoryGB": 16, "contextTokens": 8192
+  }]
+}
+```
+
+Migration for `modelCatalog`:
+
+- Schema version stays `1`. Configurations without `modelCatalog` or `runtime.artifact` are unchanged and still valid.
+- `runtime.modelFile` became optional, but exactly one of `artifact` or `modelFile` is still required.
+- Older builds ignore the unknown `modelCatalog` key. They reject a `runtime` block without `modelFile`, so a policy that uses `artifact` fails closed on older builds.
+- Separately provisioned, read-only shared model directories are not supported yet.
 
 ## MCP server object
 

@@ -1,6 +1,6 @@
 # ADR 0008: App-owned bundled llama-server runtime
 
-Date: 2026-09-23. Status: Accepted for the readiness slice of WORK-001 (issue #1). Refines ADR 0003. Developer ID signing, notarization, source-built provenance and a qualified production model remain open.
+Date: 2026-09-23. Status: Accepted for the readiness slice of WORK-001 (issue #1). Refines ADR 0003. Model files are now verified catalog artifacts (ADR 0009); `modelFile` below remains as the legacy, unverified form. Developer ID signing, notarization, source-built provenance and a qualified production model remain open.
 
 ## Context
 

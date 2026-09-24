@@ -25,7 +25,7 @@ flowchart TD
     Keychain[Keychain and browser OAuth] --> MCP
 ```
 
-A fresh app avoids inheriting Llama-macOS's arbitrary model installation, network exposure settings, and local overrides. llama.cpp is the runtime. The runtime revision is now pinned (`packaging/runtime.lock.json`, ADR 0008); a supported deployment must still pin model hash, quantization, template, and context limit together (WORK-002).
+A fresh app avoids inheriting Llama-macOS's arbitrary model installation, network exposure settings, and local overrides. llama.cpp is the runtime. The runtime revision is now pinned (`packaging/runtime.lock.json`, ADR 0008); model artifacts now pin hash, size, quantization, template notes, runtime tag and approved context together (ADR 0009). Qualification by benchmark is still separate (WORK-005).
 
 ## Bundled runtime lifecycle (ADR 0008)
 
@@ -47,7 +47,25 @@ stateDiagram-v2
 - Readiness: poll `/health` (public) until the configured timeout, then require the child alive, 401 for no key and for a random decoy key, 200 for the real key with the expected alias and sufficient `n_ctx`. The challenge stands in for socket-ownership checks, which App Sandbox denies.
 - `ManagedInferenceClient` acquires a lease per inference call and releases it afterwards; idle unload only runs with zero leases. A child exit maps to `failed(reason)` and the task error shows that reason. No background restart, no cloud fallback.
 - The guard forwards termination signals and stops the server if the app disappears, so a crashed or force-killed app does not leave a model resident in memory.
-- `minimodell --runtime-smoke-test [--hold N]` runs the same path with a fixed synthetic prompt inside the packaged app's sandbox and prints a content-free JSON report (timings, byte counts, state).
+- `minimodell --runtime-smoke-test [--tool] [--show-reply] [--hold N]` runs the same path with fixed synthetic prompts inside the packaged app's sandbox. It prints a JSON report: timings, token counts and throughput, and state. Reply text appears only with `--show-reply`, and every prompt is synthetic. `--tool` adds a synthetic tool round trip through `TaskRunner` with an in-process fixture tool (`SyntheticOrderTool`); no MCP server or account is involved.
+- The launch arguments include `--jinja`. It is the b11140 default, but tool-call parsing depends on it.
+
+## Verified model artifacts (ADR 0009)
+
+```mermaid
+flowchart LR
+    policy["policy runtime.artifact"] --> catalog["effective catalog<br/>(policy modelCatalog or built-in)"]
+    catalog --> store["ModelStore"]
+    store -- "download (Range, approved hosts)<br/>or import (copy)" --> partial[".partial/&lt;id&gt;.part"]
+    partial -- "size + SHA-256 match" --> promoted["Models/&lt;fileName&gt;<br/>+ .verified/&lt;id&gt;.json"]
+    partial -- "mismatch" --> discarded["deleted"]
+    promoted -- "verifiedURL: record matches, else re-hash" --> runtime["RuntimeManager --model"]
+```
+
+- `ModelCatalog.swift` defines `ModelArtifact` (identity, pinned source, size, SHA-256, quantization, license, template notes, runtime tags, minimum memory, approved context) and the effective catalog. A configuration's `modelCatalog` replaces built-in fields. A forced managed policy replaces the whole configuration, so users cannot extend it. An invalid catalog fails validation, with no fallback.
+- `ModelStore` (actor, `ModelStore.swift`) owns the `Models` folder. It downloads through the `ArtifactTransport` seam: `URLSessionArtifactTransport` streams straight to disk, resumes with Range after network interruptions, follows redirects only to HTTPS approved hosts, and caps the body at `sizeBytes`. It checks free disk space, verifies size and hash **before** an atomic `rename(2)`, and supports cancel (removes the partial file), delete, and import (hashes the copied file). Statuses: `notInstalled`, `unverified`, `downloading(received,total)`, `verifying`, `ready`, `failed(reason)`.
+- `RuntimeManager` launches an artifact only when the policy names it, the bundled runtime tag is in its `runtimeTags`, and `ModelStore.verifiedURL` succeeds. Otherwise the task fails with a clear reason and nothing is launched.
+- UI: Settings → Models lists the effective catalog with status and Download / Cancel / Delete / Import. It is deliberately plain; a redesign is backlog. `minimodell --model-download [id]` runs the same store path headlessly inside the sandbox.
 
 ## Provider and catalog design
 
