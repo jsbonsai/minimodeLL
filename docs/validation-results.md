@@ -122,3 +122,27 @@ Not tested:
 - **Model quality:** multi-turn quality and any accuracy measurement were not done.
 - **Other build and signing paths:** release-configuration smoke with this model, Developer ID and notarization were not tested.
 - **Real connectors:** a real MCP server or company account was not used, by design.
+
+## Command bar and design system (WORK-009, branch feat/raycast-design)
+
+Environment: Apple M1 Pro, 32 GB, macOS 15.7.7 (24G720), Xcode 16.4, Swift 6.1. Session record: `docs/sessions/2026-09-23-raycast-design.md`. Spec: `docs/design/raycast-redesign.md`.
+
+Automated:
+
+- `swift test`: 73 tests passed (56 existing plus 17 in the new `MinimodeLLTests` target: hotkey parsing/storage, command bar phase resolution and actions, keyboard map through `CommandBarController.handle` with synthetic `NSEvent`s including approval keys reaching `AppState.decide`). No window, hotkey, model or server is involved.
+- `minimodell --render-design-previews`: 20 PNGs (10 states × light/dark) rendered with `ImageRenderer` from the SwiftPM binary and inspected; 12 are kept in `docs/design/previews/` (each under 300 KB). Materials render as the opaque fallback and the text field as static text in these images by design.
+- `scripts/package-app.sh` (external-server mode, ad-hoc) built and `codesign --verify --strict` passed.
+
+Packaged app launch (`open -n build/minimodeLL.app --args --open-command-bar`):
+
+- The app launched and stayed up. `CGWindowListCopyWindowInfo` for its PID showed the command bar panel on screen at window level 3 (floating), 680 × 250 pt, horizontally centred, top edge at 22 % of the screen, i.e. the idle card (header, three suggestions, footer) at its natural height with the top edge anchored. No workspace window opened at launch (`MenuBarExtra` is now the first scene); the menu bar status item was present.
+- The container `config.json` SHA-1 was identical before and after (`44a6ff0b…`); the two model files in the container were untouched. The app was quit with `pkill -x minimodell`; nothing was left running.
+- Two defects were found and fixed during this check: the card height preference was being overwritten by the hidden ⌘K panel's default value (the window stayed at 62 pt), and the AppKit entrance frame animation was fighting the height follower. The entrance is now a SwiftUI scale-in with a window fade.
+
+Not tested (no keyboard/mouse automation without Accessibility permission, and `screencapture -l` fails without Screen Recording permission):
+
+- The global hotkey actually firing (registration status is shown in Settings → Command Bar; `RegisterEventHotKey` returned success is not observable from outside).
+- Typing, ⌘K navigation, approval keys and the result/error transitions in the live panel (covered by unit tests of the same code paths only).
+- Real vibrancy appearance, light/dark appearance of the live panel, Reduce Motion / Reduce Transparency switches, multi-display placement, and the panel hiding on focus loss.
+- Settings → Command Bar tab and the restyled Settings/workspace windows were not visually inspected.
+- A real task through the bar (mock server or model) was not run.

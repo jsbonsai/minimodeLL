@@ -193,6 +193,10 @@ The context estimate includes encoded message history and tool definitions, outp
 
 The inference response has a separate fixed 262,144-byte transport cap. MCP buffering is not yet protected by an equivalent pre-decode byte cap. Cancellation and timeout do not undo external actions already accepted by a service.
 
+## Per-user preferences that are not policy
+
+The command bar's global shortcut is stored in the app's `UserDefaults` under `commandBarHotkey` as text such as `option+space` (modifier names joined with `+`, then one key; at least one modifier). It is not part of `PolicyJSON` or `config.json`, grants no capability, and an invalid value falls back to ⌥Space. Administrators can preset it with an ordinary (non-forced or forced) preference in the `org.minimodell.agent` domain; the app re-registers when the preference changes.
+
 ## Validate and deploy
 
 ```sh

@@ -41,6 +41,23 @@
 - `MinimodeLLApp.swift` also contains `RuntimeStatus` (a minimal readiness line under the destination label; the menu shows the same summary and an "Unload local model" item) and `RuntimeSmokeCommand` (`--runtime-smoke-test [--tool] [--show-reply] [--hold N]`), which exits before any window is shown. It also holds `ModelsSettings`/`ModelRow` (the Settings → Models tab: status, Download, Cancel, Delete, Import via `fileImporter`) and `ModelDownloadCommand` (`--model-download [artifact-id]`, a headless verified download inside the sandbox).
 - `AppState.swift` also owns the `ModelStore`, which is passed to the `RuntimeManager`. It mirrors artifact statuses and exposes download/cancel/delete/import. Deleting the artifact the policy uses stops the runtime first.
 
+### Design system (`Sources/MinimodeLL/Design`, spec in `docs/design/raycast-redesign.md`)
+
+- `Tokens.swift`: `DesignPalette` (brand colors per scheme, plain values so offline rendering is deterministic), `Space`, `Radius`, `Typography` (Geist ramp), the `palette`/`opaqueMaterials` environment keys and `designRoot()`, which every design surface applies at its root (scheme → palette, base font, tint, Reduce Transparency → opaque materials).
+- `Materials.swift`: `Material` (`NSVisualEffectView` `.hudWindow`/`.popover` with a rounded mask; opaque `surface` fallback), `cardChrome()`, `insetSurface()`.
+- `Motion.swift`: durations/curves, `motion(_:value:)` (crossfade under Reduce Motion), `SectionTransition`, `PulseDot`.
+- `Hotkey.swift`: `Hotkey` (text form ↔ Carbon key code/modifiers, requires ≥ 1 modifier, `UserDefaults` key `commandBarHotkey`, fallback ⌥Space) and `GlobalHotkey` (`RegisterEventHotKey`; sandbox-safe, no Accessibility permission, delivers only the registered combination).
+- `DesignPreviews.swift`: `--render-design-previews <dir>` renders the command bar states light/dark with `ImageRenderer` (opaque materials, static text field, no scroll views) and exits; `BoundedScroll` and the `staticLayout` environment key.
+
+### Command bar (`Sources/MinimodeLL/CommandBar`)
+
+- `CommandBarState.swift`: `CommandBarPhase`, `Destination`, `CommandBarInputs` (plain facts) → `CommandBarModel.resolve` (pure; precedence locked › approval › running › error › result › typing › idle), `ProposalSummary`, `CommandBarActions`, `BarAction` list per phase. No policy or approval logic.
+- `CommandBarView.swift`: the card (header with mark/input/destination chip, phase body, footer with key hints), `SuggestionList`, `ProgressSection`, `ApprovalCard`, `ResultSection`, `NoticeSection`, `ActionPanel` (⌘K), `CommandBarSession` (transient UI state: ⌘K open, selections, focus token, presented) and `CommandBarLayout` constants.
+- `CommandBarPanel.swift`: borderless non-activating floating `NSPanel`, transparent, key-capable, `.transient`; placed under the pointer's screen at 22 % from the top and resized with its top edge anchored.
+- `CommandBarController.swift`: owns the panel, hosting view (`preferredContentSize` sizing), hotkey registration (re-registers on `UserDefaults` change), the local key monitor (`handle(_:)`, the keyboard map), show/hide with fade, approval surfacing via `withObservationTracking`, and `CommandBarHost` + `AppState.commandBarInputs`. Every action calls `AppState` (`submit`, `cancel`, `decide`, `stopRuntime`, `selectedModel`).
+- `CommandBarSettings.swift`: Settings → Command Bar tab (shortcut text, validation notices, registration status, "Show command bar").
+- `MinimodeLLApp.swift` creates the controller in `init`, puts `MenuBarExtra` first so no window opens at launch, adds `--render-design-previews` and `--open-command-bar` (debug: shows the bar 0.6 s after launch), and passes the controller to `MenuContent` and `SettingsView`.
+
 ## Runtime guard (`Sources/RuntimeGuard/main.swift`)
 
 `minimodell-runtime-guard <llama-server> [args…]`: posix_spawns the server with the inherited environment, forwards SIGTERM/SIGINT/SIGHUP and escalates to SIGKILL after 3 s, stops the server the same way when re-parented because the app died, and exits with the server status (128 + signal when signalled). No logging. Embedded only when the runtime is fetched.
@@ -55,6 +72,7 @@
 - `Tests/LocalAgentCoreTests/RunnerTests.swift`: fake inference/tools, action approval/rejection, input/output bounds, cancellation, duplicate IDs and audit failure. These are orchestration tests, not model accuracy tests.
 - `Tests/LocalAgentCoreTests/RuntimeTests.swift`: `FakeHost`/`FakeProcess` lifecycle tests (startup, key handling, timeout, exit during startup, crash while ready, foreign/any-key servers, alias mismatch, idle unload with leases, stop escalation, quit, policy change, cancellation, guard launch), managed-provider validation, example-config decoding, and real loopback port reservation. No model or server is started.
 - `Tests/LocalAgentCoreTests/ModelStoreTests.swift`: `FakeTransport` store tests and catalog/policy validation. Covers verify-before-promote, hash and size mismatch, oversize, cancellation cleanup, resume, disk-space refusal, catalog/host/allowDownloads gates, import verification, tamper re-verification, delete, the runtime launching only verified artifacts, and the runtime tag gate. No network is used.
+- `Tests/MinimodeLLTests/` (`@testable import MinimodeLL`, no window or hotkey): `HotkeyTests.swift` (parsing, aliases, glyphs, rejection of bare keys, storage round trip and fallback), `CommandBarStateTests.swift` (phase precedence, destination mapping, submit gating, locked/managed status, per-phase actions, content-free status line), `CommandBarKeyTests.swift` (keyboard map through `CommandBarController.handle` with synthetic `NSEvent`s: ⌘K/esc, suggestion navigation, approval keys reaching `AppState.decide`, action list, pass-through). These construct a real `AppState`, which installs the starter config in the test process's Application Support if absent.
 - `scripts/mock-inference.py`: optional local HTTP fixture for UI checks. It returns an explicitly labeled fixed response, does not run a model, and makes no outbound requests. It occupies port 9931 until stopped.
 
 ## Management and examples
