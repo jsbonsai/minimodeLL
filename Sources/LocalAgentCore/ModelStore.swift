@@ -124,6 +124,9 @@ public actor ModelStore {
             try store.prepareDirectories()
             var offset = Self.size(of: partial) ?? 0
             if offset > artifact.sizeBytes { try? FileManager.default.removeItem(at: partial); offset = 0 }
+            // A previous attempt wrote every byte but stopped before verification: verify locally instead of
+            // requesting an empty range, which some servers answer with the full multi-GB body.
+            if offset == artifact.sizeBytes { try await store.verifyAndPromote(partial, as: artifact); return }
             if offset == 0 { guard FileManager.default.createFile(atPath: partial.path, contents: nil, attributes: [.posixPermissions: 0o600]) else {
                 throw AgentError.rejected("Could not create the download file.")
             } }

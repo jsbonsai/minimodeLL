@@ -233,6 +233,19 @@ func artifactJSON(_ artifact: ModelArtifact) throws -> [String: Any] {
     #expect(await models.status(of: item) == .ready)
 }
 
+@Test func completePartialIsVerifiedWithoutNetwork() async throws {
+    let directory = try tempDirectory(); defer { try? FileManager.default.removeItem(at: directory) }
+    let data = syntheticBytes(), item = artifact(for: data)
+    let transport = FakeTransport(data)
+    let models = store(directory, transport)
+    let partial = await models.partialURL(item)
+    try FileManager.default.createDirectory(at: partial.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try data.write(to: partial)
+    try await models.download(item, catalog: catalog([item]))
+    #expect(transport.callCount == 0)
+    #expect(await models.status(of: item) == .ready)
+}
+
 @Test func insufficientDiskSpaceRefusesBeforeTransfer() async throws {
     let directory = try tempDirectory(); defer { try? FileManager.default.removeItem(at: directory) }
     let data = syntheticBytes(), item = artifact(for: data)
