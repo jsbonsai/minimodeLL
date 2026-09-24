@@ -28,3 +28,5 @@ Do not include credentials, company message content, private endpoints or unnece
 - [2026-09-23: verified model catalog and first real model](2026-09-23-model-catalog.md) — WORK-002 partial: `ModelCatalog`/`ModelStore`, Qwen3-4B-Instruct-2507 Q4_K_M live in the bundled runtime (PR #20).
 - [2026-09-23: branded README and GitHub Pages site](2026-09-23-site-and-readme.md) — `site/`, README/docs branding, Pages workflow (PR #16).
 - [2026-09-23/24: coordinator — merges, review fixes, issue triage](2026-09-23-coordinator.md) — integration of the above into `main`, two pre-merge review fixes, GitHub issue/label/milestone triage, live Pages verification.
+- [2026-09-23: LAN inference providers](2026-09-23-lan-inference.md) — WORK-016, `lan` provider kind, ADR 0011 (PR #24).
+- [2026-09-23: MCP server management](2026-09-23-mcp-server-settings.md) — WORK-017, Settings CRUD, custom headers, ADR 0012 (PR #27).

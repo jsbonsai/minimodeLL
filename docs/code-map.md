@@ -72,7 +72,7 @@
 - `Config/mcp-servers.example.json`: a bearer-authenticated MCP server with one inline and one secret header and two tool rules, plus a disabled OAuth server (ADR 0012). Placeholder `example.com` endpoints.
 - `Config/bundled-runtime.example.json`: one `managed` provider referencing the built-in verified artifact `qwen3-4b-instruct-2507-q4_k_m`, and its single model stub (16 GB, 8,192 context).
 - `scripts/make-profile.py`: converts a reviewed policy JSON file into a forced macOS preference profile. No credentials should be supplied.
-- `scripts/mdm-readiness.sh`: shared read-only app-signature and explicit-policy validation for either Jamf or Kandji.
+- `scripts/mdm-readiness.sh`: shared read-only app-signature and explicit-policy validation for either Jamf or Iru (formerly Kandji).
 - `scripts/jamf-inventory.sh`: read-only architecture/RAM Extension Attribute.
 
 ## Common changes
