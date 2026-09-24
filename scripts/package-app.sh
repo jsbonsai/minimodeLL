@@ -34,6 +34,8 @@ if [[ -f "$runtime_dir/runtime.lock.json" ]] && cmp -s "$runtime_dir/runtime.loc
   embed_runtime=1
   mkdir -p "$app_path/Contents/Helpers" "$app_path/Contents/Frameworks" "$app_path/Contents/Resources/Runtime"
   install -m 755 "$runtime_dir/llama-server" "$app_path/Contents/Helpers/llama-server"
+  # Supervisor that stops the server if the app dies (Sources/RuntimeGuard).
+  install -m 755 "$bin_path/minimodell-runtime-guard" "$app_path/Contents/Helpers/minimodell-runtime-guard"
   for lib in "$runtime_dir"/*.dylib; do install -m 755 "$lib" "$app_path/Contents/Frameworks/"; done
   # Resolve @rpath only from the app's Frameworks directory, never from next to the helper.
   install_name_tool -delete_rpath @loader_path "$app_path/Contents/Helpers/llama-server"
@@ -64,13 +66,21 @@ PY
 identity="${SIGNING_IDENTITY:--}"
 # Sign nested code inside-out: runtime dylibs, sandbox-inheriting helper, diagnostics, then the app.
 if ((embed_runtime)); then
+  # Hardened runtime enforces library validation: the helper may only load dylibs with its own Team ID.
+  # Ad-hoc signatures have no Team ID, so dyld rejects every bundled dylib ("different Team IDs"; see
+  # docs/validation-results.md). Ad-hoc development builds therefore sign the helper without hardened
+  # runtime; a real SIGNING_IDENTITY keeps hardened runtime because all nested code shares one Team ID.
+  helper_options=(--options runtime)
+  [[ "$identity" == "-" ]] && helper_options=()
   for lib in "$app_path/Contents/Frameworks"/*.dylib; do
     codesign --force --options runtime --sign "$identity" "$lib"
   done
-  codesign --force --options runtime --entitlements packaging/Helper.entitlements --sign "$identity" \
+  codesign --force ${helper_options[@]+"${helper_options[@]}"} --entitlements packaging/Helper.entitlements --sign "$identity" \
     "$app_path/Contents/Helpers/llama-server"
+  codesign --force --options runtime --entitlements packaging/Helper.entitlements --sign "$identity" \
+    "$app_path/Contents/Helpers/minimodell-runtime-guard"
 fi
 codesign --force --options runtime --sign "$identity" "$app_path/Contents/MacOS/minimodell-diagnostics"
 codesign --force --options runtime --entitlements packaging/App.entitlements --sign "$identity" "$app_path"
-codesign --verify --strict "$app_path"
+codesign --verify --strict --deep "$app_path"
 printf '%s\n' "$app_path"

@@ -3,5 +3,8 @@
 <plist version="1.0"><dict>
     <key>com.apple.security.app-sandbox</key><true/>
     <key>com.apple.security.network.client</key><true/>
+    <!-- Required: the bundled llama-server inherits this sandbox and must bind/listen on 127.0.0.1 (ADR 0008).
+         Without it, bind() is denied (recorded in docs/validation-results.md). The server binds loopback only. -->
+    <key>com.apple.security.network.server</key><true/>
     <key>com.apple.security.files.user-selected.read-only</key><true/>
 </dict></plist>

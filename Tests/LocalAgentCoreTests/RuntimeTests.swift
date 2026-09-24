@@ -39,11 +39,12 @@ final class FakeHost: RuntimeHost, @unchecked Sendable {
     private let lock = NSLock()
     var healthyAfterPolls = 1          // Int.max: never ready
     var anonymousStatus = 401          // 200 simulates a foreign server that accepts anything
-    var childOwnsListener = true
+    var acceptsAnyBearer = false       // a foreign server that fakes auth by accepting any key
+    var childExitsAfterHealth = false  // foreign process answered /health; our child failed to bind
     var exitImmediately = false
     var ignoresTerminate = false
     var servedAlias = "local-model"
-    private(set) var launches: [(arguments: [String], environment: [String: String], process: FakeProcess)] = []
+    private(set) var launches: [(executable: URL, arguments: [String], environment: [String: String], process: FakeProcess)] = []
     private var healthPolls = 0
     private var nextPort: UInt16 = 40000
 
@@ -51,7 +52,7 @@ final class FakeHost: RuntimeHost, @unchecked Sendable {
     func launch(executable: URL, arguments: [String], environment: [String: String]) throws -> any RuntimeProcess {
         let process = lock.withLock { () -> FakeProcess in
             let process = FakeProcess(pid: Int32(1000 + launches.count), ignoresTerminate: ignoresTerminate)
-            launches.append((arguments, environment, process)); healthPolls = 0
+            launches.append((executable, arguments, environment, process)); healthPolls = 0
             return process
         }
         if exitImmediately { process.exit(1) }
@@ -61,14 +62,15 @@ final class FakeHost: RuntimeHost, @unchecked Sendable {
         let key = lock.withLock { launches.last?.environment["LLAMA_API_KEY"] }
         if url.path == "/health" {
             let polls = lock.withLock { healthPolls += 1; return healthPolls }
-            return (polls >= healthyAfterPolls ? 200 : 503, Data())
+            let healthy = polls >= healthyAfterPolls
+            if healthy, childExitsAfterHealth { lastProcess?.exit(1) }
+            return (healthy ? 200 : 503, Data())
         }
         guard url.path == "/v1/models" else { return (404, Data()) }
         if bearer == nil { return (anonymousStatus, Data()) }
-        guard bearer == key else { return (401, Data()) }
+        guard bearer == key || acceptsAnyBearer else { return (401, Data()) }
         return (200, Data(#"{"data":[{"id":"\#(servedAlias)","meta":{"n_ctx":8192}}]}"#.utf8))
     }
-    func isListening(pid: Int32, port: UInt16) -> Bool { childOwnsListener }
     var lastProcess: FakeProcess? { lock.withLock { launches.last?.process } }
     var launchCount: Int { lock.withLock { launches.count } }
 }
@@ -79,7 +81,7 @@ func runtimeSettings(timeout: Duration = .seconds(2), idle: Duration? = nil, con
                           contextTokens: context, parallel: 1, startupTimeout: timeout, idleUnload: idle)
 }
 func makeRuntime(_ host: FakeHost) -> RuntimeManager {
-    RuntimeManager(host: host, helperURL: URL(fileURLWithPath: "/nonexistent/llama-server"),
+    RuntimeManager(host: host, helperURL: URL(fileURLWithPath: "/nonexistent/llama-server"), guardURL: nil,
                    modelsDirectory: FileManager.default.temporaryDirectory,
                    pollInterval: .milliseconds(10), stopGrace: .milliseconds(100))
 }
@@ -109,6 +111,19 @@ func eventually(_ condition: () async -> Bool) async -> Bool {
     _ = try await runtime.acquire(runtimeSettings())
     #expect(host.launchCount == 1)
     #expect(await runtime.leaseCount == 2)
+    await runtime.stop()
+}
+
+@Test func guardSupervisesServerWhenBundled() async throws {
+    let host = FakeHost()
+    let runtime = RuntimeManager(host: host, helperURL: URL(fileURLWithPath: "/app/Helpers/llama-server"),
+                                 guardURL: URL(fileURLWithPath: "/app/Helpers/guard"),
+                                 modelsDirectory: FileManager.default.temporaryDirectory, pollInterval: .milliseconds(10))
+    _ = try await runtime.acquire(runtimeSettings())
+    let launch = try #require(host.launches.first)
+    #expect(launch.executable.path == "/app/Helpers/guard")
+    #expect(launch.arguments.first == "/nonexistent/llama-server") // server path is the guard first argument
+    #expect(launch.arguments.contains("--port"))
     await runtime.stop()
 }
 
@@ -171,11 +186,18 @@ func eventually(_ condition: () async -> Bool) async -> Bool {
     #expect(host.lastProcess?.isRunning == false)
 }
 
-@Test func listenerNotOwnedByChildIsRejected() async throws {
-    let host = FakeHost(); host.childOwnsListener = false
+@Test func serverAcceptingAnyKeyIsRejected() async throws {
+    let host = FakeHost(); host.acceptsAnyBearer = true
     let runtime = makeRuntime(host)
     await #expect(throws: AgentError.self) { try await runtime.acquire(runtimeSettings()) }
     #expect(host.lastProcess?.isRunning == false)
+}
+
+@Test func healthFromAnotherProcessWhileChildDiesIsRejected() async throws {
+    let host = FakeHost(); host.childExitsAfterHealth = true
+    let runtime = makeRuntime(host)
+    await #expect(throws: AgentError.self) { try await runtime.acquire(runtimeSettings()) }
+    guard case .failed = await runtime.state else { Issue.record("expected failed state"); return }
 }
 
 @Test func wrongModelAliasIsRejected() async throws {
@@ -269,7 +291,7 @@ func managedConfig(_ provider: [String: Any], models: [[String: Any]]? = nil) th
     }
 }
 @Test func existingConfigurationsStillDecode() throws {
-    for name in ["local.example.json", "enterprise.example.json"] {
+    for name in ["local.example.json", "enterprise.example.json", "bundled-runtime.example.json"] {
         let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("../../Config/\(name)")
         _ = try ConfigurationLoader.decode(Data(contentsOf: url))
     }
@@ -292,13 +314,11 @@ func managedConfig(_ provider: [String: Any], models: [[String: Any]]? = nil) th
     #expect(settings.arguments(port: 1234).contains("16384")) // each slot gets the policy context
     #expect(settings.idleUnload == .seconds(900))
 }
-@Test func systemHostReservesLoopbackPortAndSeesOwnListener() throws {
+@Test func systemHostReservesFreeLoopbackPort() throws {
     let host = SystemRuntimeHost()
     let port = try host.reserveLoopbackPort()
     #expect(port > 0)
-    // Not listening on the just-released port.
-    #expect(!host.isListening(pid: getpid(), port: port))
-    // Listen on it ourselves: the socket-ownership check must see it for this pid only.
+    // The reservation socket is closed, so the child can bind the port.
     let fd = socket(AF_INET, SOCK_STREAM, 0); defer { close(fd) }
     var address = sockaddr_in()
     address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size); address.sin_family = sa_family_t(AF_INET)
@@ -306,7 +326,8 @@ func managedConfig(_ provider: [String: Any], models: [[String: Any]]? = nil) th
     let bound = withUnsafePointer(to: &address) {
         $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) }
     }
-    try #require(bound == 0 && listen(fd, 1) == 0)
-    #expect(host.isListening(pid: getpid(), port: port))
-    #expect(!host.isListening(pid: 1, port: port))
+    #expect(bound == 0)
+}
+@Test func systemHostRefusesNonLoopbackProbes() async throws {
+    await #expect(throws: AgentError.self) { try await SystemRuntimeHost().get(URL(string: "http://example.com/health")!, bearer: nil) }
 }

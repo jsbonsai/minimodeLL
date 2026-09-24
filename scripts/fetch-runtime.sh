@@ -10,9 +10,10 @@
 #
 # Usage: scripts/fetch-runtime.sh            # idempotent; reuses a verified vendor copy
 #        FORCE=1 scripts/fetch-runtime.sh    # re-download and re-verify
+#        RUNTIME_LOCK=/path/lock.json ...    # alternate lock (used to test checksum rejection)
 set -euo pipefail
 cd "$(dirname "$0")/.."
-lock="packaging/runtime.lock.json"
+lock="${RUNTIME_LOCK:-packaging/runtime.lock.json}"
 
 read_lock() { /usr/bin/python3 -c 'import json,sys; v=json.load(open(sys.argv[1]))[sys.argv[2]]; print("\n".join(v) if isinstance(v, list) else v)' "$lock" "$1"; }
 tag="$(read_lock tag)"

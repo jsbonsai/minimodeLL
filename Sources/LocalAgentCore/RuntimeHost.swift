@@ -57,25 +57,6 @@ public struct SystemRuntimeHost: RuntimeHost {
         }
         return ((response as? HTTPURLResponse)?.statusCode ?? 0, data)
     }
-
-    public func isListening(pid: Int32, port: UInt16) -> Bool {
-        let bytes = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, nil, 0)
-        guard bytes > 0 else { return false }
-        let stride = MemoryLayout<proc_fdinfo>.stride
-        var fds = [proc_fdinfo](repeating: proc_fdinfo(), count: Int(bytes) / stride + 16)
-        let used = fds.withUnsafeMutableBytes { proc_pidinfo(pid, PROC_PIDLISTFDS, 0, $0.baseAddress, Int32($0.count)) }
-        guard used > 0 else { return false }
-        for fd in fds.prefix(Int(used) / stride) where fd.proc_fdtype == UInt32(PROX_FDTYPE_SOCKET) {
-            var info = socket_fdinfo()
-            let size = Int32(MemoryLayout<socket_fdinfo>.size)
-            guard proc_pidfdinfo(pid, fd.proc_fd, PROC_PIDFDSOCKETINFO, &info, size) == size,
-                  info.psi.soi_kind == Int32(SOCKINFO_TCP) else { continue }
-            let tcp = info.psi.soi_proto.pri_tcp
-            let localPort = UInt16(bigEndian: UInt16(truncatingIfNeeded: tcp.tcpsi_ini.insi_lport))
-            if tcp.tcpsi_state == Int32(TSI_S_LISTEN), localPort == port { return true }
-        }
-        return false
-    }
 }
 
 final class SystemRuntimeProcess: RuntimeProcess, @unchecked Sendable {

@@ -40,13 +40,11 @@ public protocol RuntimeProcess: AnyObject, Sendable {
 /// Operating-system services the runtime manager needs. Test seam, not a plugin system.
 public protocol RuntimeHost: Sendable {
     /// A currently free TCP port on 127.0.0.1. Another process may still take it before the child binds,
-    /// which is why readiness verifies the listener identity and authentication.
+    /// which is why readiness verifies the child is alive and answers a key challenge.
     func reserveLoopbackPort() throws -> UInt16
     func launch(executable: URL, arguments: [String], environment: [String: String]) throws -> any RuntimeProcess
     /// Loopback-only GET. Returns status and a bounded body. Never follows redirects.
     func get(_ url: URL, bearer: String?) async throws -> (status: Int, body: Data)
-    /// Whether `pid` owns a listening TCP socket on `port`.
-    func isListening(pid: Int32, port: UInt16) -> Bool
 }
 
 /// Settings for one launch. Equal settings reuse a running process; different settings restart it.
@@ -94,16 +92,26 @@ public actor RuntimeManager {
     private var generation = 0
     private var observers: [UUID: AsyncStream<RuntimeState>.Continuation] = [:]
 
+    private let guardURL: URL?
+
+    /// `guardURL`: optional supervisor that launches the server and stops it if the app dies (see RuntimeGuard).
     public init(host: any RuntimeHost = SystemRuntimeHost(), helperURL: URL? = RuntimeManager.bundledHelperURL,
+                guardURL: URL? = RuntimeManager.bundledGuardURL,
                 modelsDirectory: URL = RuntimeManager.defaultModelsDirectory,
                 pollInterval: Duration = .milliseconds(250), stopGrace: Duration = .seconds(5)) {
-        self.host = host; self.helperURL = helperURL; self.modelsDirectory = modelsDirectory
+        self.host = host; self.helperURL = helperURL; self.guardURL = guardURL; self.modelsDirectory = modelsDirectory
         self.pollInterval = pollInterval; self.stopGrace = stopGrace
     }
 
     /// `Contents/Helpers/llama-server` inside the packaged app, or nil (SwiftPM runs, runtime not fetched).
+    /// Requires the guard too: the packaged app never runs the server unsupervised.
     public static var bundledHelperURL: URL? {
         let url = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/llama-server")
+        return FileManager.default.isExecutableFile(atPath: url.path) && bundledGuardURL != nil ? url : nil
+    }
+    /// `Contents/Helpers/minimodell-runtime-guard` inside the packaged app.
+    public static var bundledGuardURL: URL? {
+        let url = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/minimodell-runtime-guard")
         return FileManager.default.isExecutableFile(atPath: url.path) ? url : nil
     }
     /// `<Application Support>/<bundle id>/Models`; inside the sandbox container for the packaged app.
@@ -217,7 +225,9 @@ public actor RuntimeManager {
             var environment = ["LLAMA_API_KEY": key]
             // Explicit environment: no inherited LLAMA_ARG_* overrides can reach the child.
             for name in ["HOME", "TMPDIR"] { environment[name] = ProcessInfo.processInfo.environment[name] }
-            let process = try host.launch(executable: settings.helper, arguments: settings.arguments(port: port),
+            let serverArguments = settings.arguments(port: port)
+            let process = try host.launch(executable: guardURL ?? settings.helper,
+                                          arguments: guardURL == nil ? serverArguments : [settings.helper.path] + serverArguments,
                                           environment: environment)
             launched = process
             pending = process
@@ -262,19 +272,27 @@ public actor RuntimeManager {
             if let (status, _) = try? await host.get(root.appendingPathComponent("health"), bearer: nil), status == 200 { break }
             try await Task.sleep(for: pollInterval)
         }
-        // /health is unauthenticated, so readiness alone proves nothing about who answered. Trust the port only
-        // if our child owns the listener, unauthenticated requests are refused, and our key is accepted.
-        let foreign = AgentError.rejected("The runtime port could not be verified. Another process may be using it.")
-        guard process.isRunning, host.isListening(pid: process.processIdentifier, port: port) else { throw foreign }
+        // /health is unauthenticated, so readiness alone proves nothing about who answered. Only a server that
+        // knows this launch's secret key can refuse a missing key AND a wrong random key yet accept ours.
+        // (If another process held the port first, our child fails to bind and exits; checked before and after.)
+        // A libproc listener-ownership check was evaluated and is denied by App Sandbox (process-info-pidfdinfo).
+        func foreign(_ stage: String) -> AgentError {
+            logger.error("runtime verification failed stage=\(stage, privacy: .public)")
+            return AgentError.rejected("The runtime port could not be verified. Another process may be using it.")
+        }
+        guard process.isRunning else { throw foreign("child-exited") }
         let models = root.appendingPathComponent("v1/models")
-        guard let (anonymous, _) = try? await host.get(models, bearer: nil), anonymous == 401 else { throw foreign }
-        guard let (status, body) = try? await host.get(models, bearer: key), status == 200 else { throw foreign }
+        let decoy = try Self.makeKey()
+        guard let (anonymous, _) = try? await host.get(models, bearer: nil), anonymous == 401 else { throw foreign("anonymous") }
+        guard let (wrong, _) = try? await host.get(models, bearer: decoy), wrong == 401 else { throw foreign("wrong-key") }
+        guard let (status, body) = try? await host.get(models, bearer: key), status == 200 else { throw foreign("key") }
+        guard process.isRunning else { throw foreign("child-exited") }
         struct List: Decodable {
             struct Entry: Decodable { struct Meta: Decodable { let n_ctx: Int? }; let id: String; let meta: Meta? }
             let data: [Entry]
         }
         guard let list = try? JSONDecoder().decode(List.self, from: body),
-              let entry = list.data.first(where: { $0.id == settings.alias }) else { throw foreign }
+              let entry = list.data.first(where: { $0.id == settings.alias }) else { throw foreign("alias") }
         if let context = entry.meta?.n_ctx, context < settings.contextTokens {
             throw AgentError.rejected("The runtime context is smaller than the policy requires.")
         }
