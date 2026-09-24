@@ -3,25 +3,55 @@ import LocalAgentCore
 
 @main
 struct MinimodeLLApp: App {
-    @State private var state = AppState()
+    @State private var state: AppState
+    /// Floating command bar, global hotkey and keyboard map (docs/design/raycast-redesign.md).
+    private let commandBar: CommandBarController
     init() {
         if CommandLine.arguments.contains("--runtime-smoke-test") { RuntimeSmokeCommand.runAndExit() }
         if CommandLine.arguments.contains("--model-download") { ModelDownloadCommand.runAndExit() }
         if CommandLine.arguments.contains("--probe-provider") { ProviderProbeCommand.runAndExit() }
+        if let index = CommandLine.arguments.firstIndex(of: "--render-design-previews"), CommandLine.arguments.indices.contains(index + 1) {
+            DesignPreviewCommand.runAndExit(directory: CommandLine.arguments[index + 1])
+        }
         BrandAssets.registerFonts()
+        let appState = AppState()
+        _state = State(initialValue: appState)
+        commandBar = CommandBarController(state: appState)
+        commandBar.install()
+        // Debug aids for launch verification without a keyboard: `minimodell --open-command-bar` shows the bar;
+        // `--open-workspace` takes the ⌘O path (the controller's opener) before any window exists.
+        if CommandLine.arguments.contains("--open-command-bar") {
+            let commandBar = commandBar
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { commandBar.show() }
+        }
+        if CommandLine.arguments.contains("--open-workspace") {
+            let commandBar = commandBar
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { commandBar.openWorkspace() }
+        }
     }
     var body: some Scene {
-        WindowGroup(Brand.displayName, id: "workspace") {
-            WorkspaceView(state: state).tint(.mmAccent).font(.custom("Geist-Regular", size: 13))
-        }
-        .defaultSize(width: 820, height: 650)
         MenuBarExtra {
-            MenuContent(state: state)
+            MenuContent(state: state, commandBar: commandBar)
         } label: {
+            // The label is the one view that always exists, so the opener lives here: ⌘O and "Open workspace
+            // window" work on a fresh launch, before the workspace scene has ever been rendered.
             Image(nsImage: BrandAssets.menuIcon(state.brandState))
                 .accessibilityLabel(Brand.displayName)
+                .background(WorkspaceOpener(commandBar: commandBar))
         }
-        Settings { SettingsView(state: state).tint(.mmAccent).frame(width: 720, height: 560) }
+        WindowGroup(Brand.displayName, id: "workspace") {
+            WorkspaceView(state: state).designRoot()
+        }
+        .defaultSize(width: 820, height: 650)
+        Settings { SettingsView(state: state, commandBar: commandBar).designRoot().frame(width: 720, height: 560) }
+    }
+}
+/// Gives the command bar a way to open the workspace scene, which only a view inside the App can do.
+private struct WorkspaceOpener: View {
+    let commandBar: CommandBarController
+    @Environment(\.openWindow) private var openWindow
+    var body: some View {
+        Color.clear.onAppear { commandBar.onOpenWorkspace = { openWindow(id: "workspace") } }
     }
 }
 /// `minimodell --runtime-smoke-test [--tool] [--show-reply] [--hold N]`: exercises the bundled runtime under the
@@ -115,12 +145,12 @@ enum ModelDownloadCommand {
 private final class SummaryBox: @unchecked Sendable { var summary: ModelDownloadCommand.Summary? }
 struct MenuContent: View {
     @Bindable var state: AppState
+    let commandBar: CommandBarController
     @Environment(\.openWindow) private var openWindow
     var body: some View {
         Text(state.busy ? "Task in progress" : "Ready for a small task")
-        Button("Open \(Brand.displayName)") {
-            openWindow(id: "workspace"); NSApp.activate(ignoringOtherApps: true)
-        }
+        Button("Command bar    \(commandBar.hotkeyLabel)") { commandBar.show() }
+        Button("Open workspace window") { openWindow(id: "workspace"); NSApp.activate(ignoringOtherApps: true) }
         if state.usesManagedRuntime || state.runtimeState != .stopped { Text(state.runtimeState.summary) }
         SettingsLink()
         if state.busy { Button("Stop task") { state.cancel() } }
@@ -223,6 +253,7 @@ struct WorkspaceView: View {
 }
 struct SettingsView: View {
     @Bindable var state: AppState
+    let commandBar: CommandBarController
     var body: some View {
         TabView {
             VStack(alignment: .leading, spacing: 12) {
@@ -240,6 +271,7 @@ struct SettingsView: View {
             }.padding(24).tabItem { Label("Configuration", systemImage: "slider.horizontal.3") }
             ModelsSettings(state: state).padding(24).tabItem { Label("Models", systemImage: "cpu") }
             MCPServersSettingsView(state: state).padding(24).tabItem { Label("MCP Servers", systemImage: "server.rack") }
+            CommandBarSettings(controller: commandBar).padding(24).tabItem { Label("Command Bar", systemImage: "command") }
             Form {
                 Text("Credentials stay in your macOS Keychain.").font(.headline)
                 Text("For a provider or bearer-authenticated MCP server, use its credentialAccount value below. OAuth servers open browser sign-in when first used.").foregroundStyle(.secondary)

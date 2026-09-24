@@ -25,6 +25,8 @@ open build/minimodeLL.app
 
 The first command is unsandboxed development execution. The packaged `.app` enables sandbox and Hardened Runtime and is the meaningful path for packaging, Keychain, preferences and filesystem checks. Close the running app before replacing its executable. The app can remain in the menu bar after its task window closes; quit it explicitly when rebuilding for a launch check.
 
+The command bar (`docs/design/raycast-redesign.md`) opens with ⌥Space by default (Settings → Command Bar). Three debug arguments help when no keyboard automation is available: `minimodell --open-command-bar` shows the bar shortly after launch, `minimodell --open-workspace` opens the workspace window through the bar's ⌘O path (proves the opener works before any window exists), and `minimodell --render-design-previews <dir>` writes PNGs of every bar state (light and dark) with `ImageRenderer` and exits. The renderer must run from the SwiftPM build (`.build/debug/minimodell`): the sandboxed `.app` cannot write outside its container. Materials render opaque and the text field as static text in those PNGs; only a launched app shows real vibrancy. `screencapture -l` of the panel needs Screen Recording permission and fails with "could not create image from window" without it.
+
 Generated files under `.build/` and `build/` are not committed. A new agent on another machine must build them. Never assume a link to a previous local `.app` means a GitHub release exists.
 
 ## UI connectivity without a model or account

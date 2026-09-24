@@ -41,6 +41,10 @@ The sync command refreshes the checked-in runtime subset from the original kit. 
 
 The app's menu bar images are cached on the main actor, sized to 18 points and marked as templates. The palette parser expects the checked-in catalog JSON structure; malformed brand resources are a build/review error, not a user configuration feature.
 
+## Design tokens in code
+
+`Sources/MinimodeLL/Design/Tokens.swift` maps `tokens/tokens.json` and `brand.css` to a `DesignPalette` per color scheme (paper/ink surfaces, graphite/mist, Signal and Signal Dark, status colors lightened in dark mode for contrast), plus spacing, radii and the Geist type ramp. The command bar and the restyled Settings window read these through the SwiftUI environment (`designRoot()`); `BrandAssets.color` remains for the workspace's `NSAppearance`-driven colors. The mapping table is in `docs/design/raycast-redesign.md`.
+
 ## Validation
 
 The packaged app builds and passes strict signature verification, restarts successfully, and its branded workspace was visually inspected on the development Mac in dark appearance. Supplied app-icon metadata and resource bytes were checked in the bundle. Light appearance, active/off status appearance and Finder cache behavior have not received separate visual verification in this session. Core inference/policy behavior was not changed.

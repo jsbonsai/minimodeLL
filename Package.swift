@@ -15,6 +15,7 @@ let package = Package(
         .executableTarget(name: "MinimodeLL", dependencies: ["LocalAgentCore"], resources: [.copy("Resources/BrandAssets")]),
         .executableTarget(name: "AgentDiagnostics", dependencies: ["LocalAgentCore"]),
         .executableTarget(name: "RuntimeGuard"),
-        .testTarget(name: "LocalAgentCoreTests", dependencies: ["LocalAgentCore"])
+        .testTarget(name: "LocalAgentCoreTests", dependencies: ["LocalAgentCore"]),
+        .testTarget(name: "MinimodeLLTests", dependencies: ["MinimodeLL"])
     ]
 )

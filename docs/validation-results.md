@@ -140,3 +140,47 @@ Details in [the session record](sessions/2026-09-23-mcp-server-settings.md).
 - Header injection verified against an in-process Streamable HTTP fixture (POST path); the GET/SSE path relies on reading SDK 0.12.1 source, not a test.
 - Diagnostics pass on all five example configurations; a config with a reserved `Host` header fails validation.
 - **Not tested:** any real MCP service or OAuth sign-in through Test connection, HTTPS test server, the Settings UI on screen, real Keychain save/delete from the editor, a real forced MDM profile locking the editor.
+
+## Command bar and design system (WORK-009, branch feat/raycast-design)
+
+Environment: Apple M1 Pro, 32 GB, macOS 15.7.7 (24G720), Xcode 16.4, Swift 6.1. Session record: `docs/sessions/2026-09-23-raycast-design.md`. Spec: `docs/design/raycast-redesign.md`.
+
+Automated:
+
+- `swift test`: 73 tests passed (56 existing plus 17 in the new `MinimodeLLTests` target: hotkey parsing/storage, command bar phase resolution and actions, keyboard map through `CommandBarController.handle` with synthetic `NSEvent`s including approval keys reaching `AppState.decide`). No window, hotkey, model or server is involved.
+- `minimodell --render-design-previews`: 20 PNGs (10 states × light/dark) rendered with `ImageRenderer` from the SwiftPM binary and inspected; 12 are kept in `docs/design/previews/` (each under 300 KB). Materials render as the opaque fallback and the text field as static text in these images by design.
+- `scripts/package-app.sh` (external-server mode, ad-hoc) built and `codesign --verify --strict` passed.
+
+Packaged app launch (`open -n build/minimodeLL.app --args --open-command-bar`):
+
+- The app launched and stayed up. `CGWindowListCopyWindowInfo` for its PID showed the command bar panel on screen at window level 3 (floating), 680 × 250 pt, horizontally centred, top edge at 22 % of the screen, i.e. the idle card (header, three suggestions, footer) at its natural height with the top edge anchored. No workspace window opened at launch (`MenuBarExtra` is now the first scene); the menu bar status item was present.
+- The container `config.json` SHA-1 was identical before and after (`44a6ff0b…`); the two model files in the container were untouched. The app was quit with `pkill -x minimodell`; nothing was left running.
+- Two defects were found and fixed during this check: the card height preference was being overwritten by the hidden ⌘K panel's default value (the window stayed at 62 pt), and the AppKit entrance frame animation was fighting the height follower. The entrance is now a SwiftUI scale-in with a window fade.
+
+Not tested (no keyboard/mouse automation without Accessibility permission, and `screencapture -l` fails without Screen Recording permission):
+
+- The global hotkey actually firing (registration status is shown in Settings → Command Bar; `RegisterEventHotKey` returned success is not observable from outside).
+- Typing, ⌘K navigation, approval keys and the result/error transitions in the live panel (covered by unit tests of the same code paths only).
+- Real vibrancy appearance, light/dark appearance of the live panel, Reduce Motion / Reduce Transparency switches, multi-display placement, and the panel hiding on focus loss.
+- Settings → Command Bar tab and the restyled Settings/workspace windows were not visually inspected.
+- A real task through the bar (mock server or model) was not run.
+
+### Review fixes on PR #28 (2026-09-23, same environment)
+
+Automated, after merging `main` (LAN providers #24, MCP server settings #27) into the branch:
+
+- `swift test`: 111 tests passed (88 core plus 23 in `MinimodeLLTests`; 6 new: approval keys inert during the 0.6 s arming window and after a key repeat, ⌘K matched by character rather than key code, `apply(_:)` reporting through the session, spaced ⌘⇧⌥⌃ glyphs in `Hotkey.parse`, LAN destinations through the core's `InferenceDestination`, spoken key-cap names).
+- `minimodell --render-design-previews`: 22 PNGs (11 states × light/dark, `lan-typing` added). The approval images were inspected: the dark "Approve once" button now has ink text on the accent (6.5:1), the light "Approval required" pill uses `warningInk` (5.2:1 on its wash). 14 images kept in `docs/design/previews/` (each under 300 KB). Contrast ratios in the spec table were recomputed from the hex values with the WCAG formula.
+- `scripts/package-app.sh` (external-server mode, ad-hoc) built and `codesign --verify --strict` passed.
+
+Packaged app launch (`CGWindowListCopyWindowInfo` for the app's PID; no Screen Recording permission, so geometry only):
+
+- `--open-workspace` on a fresh launch (no window had been shown): a layer-0 window of 820 × 650 pt appeared, i.e. the controller's `onOpenWorkspace` — now attached to the menu bar label — opened the workspace scene. Before the fix this closure was only set once the workspace window already existed.
+- `--open-command-bar`: the panel at layer 3, 680 × 250 pt, as before.
+- Container `config.json` SHA-1 identical before and after (`ccd02f4889b0…`), the two model entries untouched, app quit cleanly with `pkill -x minimodell` each time.
+
+Not tested (unchanged reasons: no keyboard/mouse automation without Accessibility permission, no screen capture without Screen Recording permission):
+
+- The approval surfacing without key focus and the arming window in the live panel (the code path is unit-tested; the non-key `orderFrontRegardless` presentation and the click-to-take-keyboard behaviour were not exercised with a real approval).
+- VoiceOver output (labels, hints, spoken key caps, the approval announcement) was not heard.
+- Settings → Command Bar "Apply" status refresh, the hide-during-fade re-show, ⌘C with a selection, and the LAN chip against a real `lan` provider were not exercised in the live app.
