@@ -1,6 +1,6 @@
 # ADR 0003: Local inference plus explicitly selected LiteLLM
 
-Date: 2026-09-23. Status: Accepted; bundled runtime pending.
+Date: 2026-09-23. Status: Accepted. The bundled runtime direction is refined by [ADR 0008](0008-bundled-runtime-lifecycle.md).
 
 ## Context
 
