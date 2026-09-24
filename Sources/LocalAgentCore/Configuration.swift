@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 public enum AgentError: Error, LocalizedError, Sendable {
     case rejected(String)
@@ -80,18 +81,85 @@ public struct ModelSpec: Codable, Sendable, Identifiable {
     public let minimumMemoryGB: Int
     public let contextTokens: Int
 }
-public struct ToolRule: Codable, Sendable {
+public struct ToolRule: Codable, Sendable, Equatable {
     public let name: String
     public let requiresConfirmation: Bool
+    public init(name: String, requiresConfirmation: Bool) { self.name = name; self.requiresConfirmation = requiresConfirmation }
 }
-public struct OAuthSpec: Codable, Sendable { public let clientID: String }
-public struct MCPServerSpec: Codable, Sendable, Identifiable {
+public struct OAuthSpec: Codable, Sendable, Equatable {
+    public let clientID: String
+    public init(clientID: String) { self.clientID = clientID }
+}
+/// An HTTPS (Streamable HTTP) MCP server (ADR 0005, ADR 0012). JSON keys are unchanged from the first schema;
+/// `enabled` and `headers` are optional additions, so older configurations decode unchanged.
+public struct MCPServerSpec: Codable, Sendable, Identifiable, Equatable {
     public let id: String
+    /// Display name.
     public let title: String
+    /// HTTPS Streamable HTTP endpoint. No credentials, query string or fragment.
     public let endpoint: URL
+    /// Bearer auth mode: the Keychain account holding the token. Mutually exclusive with `oauth`.
     public let credentialAccount: String?
+    /// Explicit tool allowlist. Tools the server offers but this list omits stay blocked.
     public let tools: [ToolRule]
+    /// OAuth auth mode: a registered native public client. Mutually exclusive with `credentialAccount`.
     public let oauth: OAuthSpec?
+    /// Absent means enabled. A disabled server is never connected.
+    public let enabled: Bool?
+    /// Extra request headers (ADR 0012). Secret values live in Keychain; only the account name is stored here.
+    public let headers: [MCPHeaderSpec]?
+    public init(id: String, title: String, endpoint: URL, credentialAccount: String? = nil, tools: [ToolRule] = [],
+                oauth: OAuthSpec? = nil, enabled: Bool? = nil, headers: [MCPHeaderSpec]? = nil) {
+        self.id = id; self.title = title; self.endpoint = endpoint; self.credentialAccount = credentialAccount
+        self.tools = tools; self.oauth = oauth; self.enabled = enabled; self.headers = headers
+    }
+    public var isEnabled: Bool { enabled ?? true }
+    public enum AuthMode: Equatable, Sendable { case none, bearer(account: String), oauth(clientID: String) }
+    /// Derived from `credentialAccount` / `oauth`; validation guarantees at most one is set.
+    public var authMode: AuthMode {
+        if let oauth { return .oauth(clientID: oauth.clientID) }
+        if let credentialAccount { return .bearer(account: credentialAccount) }
+        return .none
+    }
+    /// Keychain account for OAuth tokens: server ID plus a SHA-256 binding of endpoint and client ID (ADR 0005).
+    public var oauthStorageAccount: String? {
+        guard let oauth else { return nil }
+        let binding = endpoint.absoluteString + "\n" + oauth.clientID
+        let digest = SHA256.hash(data: Data(binding.utf8)).map { String(format: "%02x", $0) }.joined()
+        return "oauth." + id + "." + digest
+    }
+    /// Every Keychain account this server reads: bearer, secret headers and OAuth token storage.
+    public var referencedAccounts: Set<String> {
+        var accounts = Set((headers ?? []).compactMap(\.secretAccount))
+        if let credentialAccount { accounts.insert(credentialAccount) }
+        if let oauthStorageAccount { accounts.insert(oauthStorageAccount) }
+        return accounts
+    }
+    /// Per-server rules; also used by the settings editor and "Test connection" before anything is saved.
+    public func validate() throws {
+        guard id.range(of: "^[A-Za-z0-9_-]{1,64}$", options: .regularExpression) != nil else {
+            throw AgentError.rejected("IDs must contain 1–64 letters, digits, underscores or hyphens.")
+        }
+        let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, name.count <= 100 else { throw AgentError.rejected("MCP server \(id) needs a display name (at most 100 characters).") }
+        try AgentConfiguration.validateEndpoint(endpoint, local: false)
+        if let oauth = oauth, oauth.clientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            throw AgentError.rejected("OAuth needs a registered native client ID.")
+        }
+        guard oauth == nil || credentialAccount == nil else {
+            throw AgentError.rejected("Choose OAuth or a bearer credential for each MCP server.")
+        }
+        if let credentialAccount, credentialAccount.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            throw AgentError.rejected("MCP server \(id) has an empty credentialAccount.")
+        }
+        guard tools.allSatisfy({ !$0.name.isEmpty && $0.name.utf8.count <= 128 }) else {
+            throw AgentError.rejected("Tool names in \(id) must be 1–128 bytes.")
+        }
+        guard Set(tools.map(\.name)).count == tools.count else {
+            throw AgentError.rejected("Duplicate tool rule in \(id).")
+        }
+        try MCPHeaderPolicy.validate(headers ?? [], authMode: authMode, serverID: id)
+    }
 }
 public struct RunLimits: Codable, Sendable {
     public let inputBytes: Int
@@ -121,8 +189,9 @@ public struct AgentConfiguration: Codable, Sendable {
                 throw AgentError.rejected("IDs must contain 1–64 letters, digits, underscores or hyphens.")
             }
         }
-        guard mcpServers.reduce(0, { $0 + $1.tools.count }) <= 16 else {
-            throw AgentError.rejected("Approve at most 16 tools in a task configuration.")
+        // Disabled servers are never connected, so only enabled servers count toward the per-task tool budget.
+        guard mcpServers.filter(\.isEnabled).reduce(0, { $0 + $1.tools.count }) <= 16 else {
+            throw AgentError.rejected("Approve at most 16 tools across enabled MCP servers.")
         }
         let catalog = effectiveCatalog
         try catalog.validate()
@@ -165,18 +234,7 @@ public struct AgentConfiguration: Codable, Sendable {
                 throw AgentError.rejected("Invalid model stub: \(model.id).")
             }
         }
-        for server in mcpServers {
-            try Self.validateEndpoint(server.endpoint, local: false)
-            if let oauth = server.oauth, oauth.clientID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                throw AgentError.rejected("OAuth needs a registered native client ID.")
-            }
-            guard server.oauth == nil || server.credentialAccount == nil else {
-                throw AgentError.rejected("Choose OAuth or a bearer credential for each MCP server.")
-            }
-            guard Set(server.tools.map(\.name)).count == server.tools.count else {
-                throw AgentError.rejected("Duplicate tool rule in \(server.id).")
-            }
-        }
+        for server in mcpServers { try server.validate() }
         guard (1...16384).contains(limits.inputBytes), (64...4096).contains(limits.outputTokens),
               (0...12).contains(limits.maxToolCalls), (128...32768).contains(limits.toolResultBytes),
               (10...300).contains(limits.timeoutSeconds) else {

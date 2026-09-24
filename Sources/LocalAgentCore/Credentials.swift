@@ -28,6 +28,15 @@ public enum CredentialStore {
             guard added == errSecSuccess else { throw AgentError.rejected("Unable to save credential (\(added)).") }
         } else if status != errSecSuccess { throw AgentError.rejected("Unable to update credential (\(status)).") }
     }
+    /// Removes one generic-password item for this app's service. A missing item is not an error.
+    public static func delete(account: String) throws {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Brand.identity, kSecAttrAccount as String: account]
+        let status = SecItemDelete(query as CFDictionary)
+        guard status == errSecSuccess || status == errSecItemNotFound else {
+            throw AgentError.rejected("Unable to remove credential (\(status)).")
+        }
+    }
 }
 
 import MCP
