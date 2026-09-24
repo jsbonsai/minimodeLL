@@ -17,6 +17,7 @@ flowchart TD
     Runner --> Inference[Inference interface]
     Inference --> Local[External loopback llama-server]
     Inference --> Cloud[HTTPS LiteLLM gateway]
+    Inference --> LAN[LAN server: private IP or .local, TLS or explicit HTTP]
     Inference --> Manager[Runtime manager]
     Manager --> Guard[Runtime guard helper]
     Guard --> Bundled[Bundled llama-server, random loopback port + per-launch key]
@@ -69,7 +70,18 @@ flowchart LR
 
 ## Provider and catalog design
 
-A provider describes an endpoint, local/cloud kind, and optional Keychain credential account. A model stub selects a provider alias and sets minimum physical memory and context length. Local endpoints must be literal loopback HTTP; remote endpoints must use HTTPS. URLs cannot contain credentials, query parameters, or fragments. Inference redirects are rejected.
+A provider describes an endpoint, a kind (`local`, `lan`, `litellm`, `managed`), and an optional Keychain credential account. A model stub selects a provider alias and sets minimum physical memory and context length. Local endpoints must be literal loopback HTTP, and LiteLLM endpoints must use HTTPS. URLs cannot contain credentials, query parameters, or fragments. Inference redirects are rejected.
+
+## LAN providers (ADR 0011)
+
+A `lan` provider sends inference to an OpenAI-compatible server on the local network, such as LM Studio, Ollama or `llama-server` on another Mac.
+
+- **Host.** `LANHost` (`LANProvider.swift`) accepts only literal RFC 1918 or link-local IPv4 addresses, IPv6 ULA or link-local addresses, and `*.local` mDNS names. Any other DNS name could resolve publicly and is rejected.
+- **Transport.** HTTPS is always allowed. HTTP requires `allowInsecureTransport: true` on that provider.
+- **Checks before every request.** `ProviderSpec.verifiedBaseURL()` runs before every request. It validates the endpoint again and re-resolves a `.local` name. If any address in the answer falls outside the LAN ranges, the request is refused. A small rebinding window remains between that check and URLSession's own lookup; the ADR discusses it.
+- **Destination label.** `InferenceDestination` supplies the label shown before submission: `LAN · TLS` or `LAN · unencrypted`, followed by "your request and tool results are sent to \<host\>".
+- **Test connection.** `ProviderProbe` lists `/models` for the connection test. It is available as `minimodell-diagnostics --probe-provider`, `minimodell --probe-provider` (sandboxed) and `AppState.testConnection`.
+- **Managed policy.** A forced policy replaces the whole configuration, so LAN providers exist only if the policy lists them. There is no fallback between providers.
 
 Physical memory is an eligibility check, not a prediction of free memory. Model size, KV cache, runtime buffers, other apps, and memory pressure all matter. The 16/24/32/64 GB fleet provides measurement targets; this preview does not automatically pick larger models on larger Macs.
 
