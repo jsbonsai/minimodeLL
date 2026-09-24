@@ -36,9 +36,9 @@ Future shared models should be provisioned as root-owned read-only files, with d
 
 ## Supported management paths and evidence
 
-The design supports both Jamf and Kandji through standard macOS PKG and forced-preference profile artifacts. Jamf is the first live validation target: the owner has an environment and access to a coworker's focused sandbox is possible. The [Jamf test plan](jamf-test-plan.md) specifies the run before any claim of enrolled-device validation.
+The design supports both Jamf and Iru (formerly Kandji) through standard macOS PKG and forced-preference profile artifacts. Jamf is the first live validation target: the owner has an environment and access to a coworker's focused sandbox is possible. The [Jamf test plan](jamf-test-plan.md) specifies the run before any claim of enrolled-device validation.
 
-Kandji is **best-effort and unvalidated**, with no available tenant or sandbox. Its [deployment guide](kandji.md) maps the shared artifacts to Custom Apps, Custom Profiles and optional Custom Scripts using vendor documentation. No Kandji API integration is needed by the app.
+Iru (formerly Kandji) is **best-effort and unvalidated**, with no available tenant or sandbox. Its [deployment guide](kandji.md) maps the shared artifacts to Custom Apps, Custom Profiles and optional Custom Scripts using vendor documentation. No Iru API integration is needed by the app.
 
 `scripts/mdm-readiness.sh` accepts an app bundle and an explicit policy JSON path. It performs read-only signature and schema checks and can be invoked by either MDM. It does not validate the effective user profile or notarization; see the provider guide for exit codes and reporting limitations.
 
@@ -46,4 +46,4 @@ Kandji is **best-effort and unvalidated**, with no available tenant or sandbox. 
 | --- | --- | --- | --- |
 | Standalone | Native app, local JSON, future production DMG | Packaged sandboxed UI and local fixture | Real runtime and clean-machine distribution |
 | Jamf | PKG, forced profile, inventory/readiness scripts | Local artifact/profile checks only | Focused owner/coworker sandbox worksheet |
-| Kandji | Same PKG/profile, shared readiness script | Official-documentation review and local artifact checks | Best-effort until an actual tenant is available |
+| Iru (formerly Kandji) | Same PKG/profile, shared readiness script | Official-documentation review and local artifact checks | Best-effort until an actual tenant is available |

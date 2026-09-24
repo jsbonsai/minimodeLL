@@ -1,20 +1,20 @@
-# Kandji deployment — best-effort, unvalidated
+# Iru (formerly Kandji) deployment — best-effort, unvalidated
 
-Status as of 2026-09-23: design and documentation support only. The owner has no Kandji tenant or sandbox. No application install, profile delivery, script execution or effective managed-preference behavior has been tested in Kandji. Do not describe this integration as certified or fleet validated.
+Status as of 2026-09-23: design and documentation support only. The owner has no Iru (formerly Kandji) tenant or sandbox. No application install, profile delivery, script execution or effective managed-preference behavior has been tested in Iru. Do not describe this integration as certified or fleet validated.
 
 ## Shared management contract
 
-Kandji and Jamf use the same app, signed PKG, schema-version-1 policy and generated `.mobileconfig`. Neither provider has an SDK or credential in the app. The app reads macOS forced preferences; the MDM vendor delivers them. Support therefore means maintaining portable artifacts and provider-specific instructions, with separate evidence for each provider.
+Iru (formerly Kandji) and Jamf use the same app, signed PKG, schema-version-1 policy and generated `.mobileconfig`. Neither provider has an SDK or credential in the app. The app reads macOS forced preferences; the MDM vendor delivers them. Support therefore means maintaining portable artifacts and provider-specific instructions, with separate evidence for each provider.
 
 The app preference domain defaults to `org.minimodell.agent`, and the forced value is `PolicyJSON`, a JSON string. Profiles replace the full app policy. Models, LiteLLM aliases, MCP server definitions and limits use the shared [configuration reference](configuration-reference.md). Credentials remain in the user's Keychain/browser OAuth flow, never in MDM policy.
 
 ## Proposed deployment workflow
 
 1. Build and validate the app/package following [deployment](deployment.md). For production, use Developer ID and notarization; an ad-hoc development artifact is not a public distribution release.
-2. Add a **Custom App** Library Item and upload the PKG. Kandji documents support for PKG, DMG and ZIP installers. Use the existing app's bundle identifier and verify version/detection behavior in a narrow test Blueprint before wider assignment. Use the PKG path for parity with Jamf. Kandji documents that a DMG should contain only the app; our drag-to-Applications DMG also includes an Applications link and is not the recommended Kandji upload. [Kandji Custom Apps](https://support.kandji.io/kb/deploying-custom-apps)
-3. Validate a reviewed policy with the diagnostics CLI, generate the `.mobileconfig`, and add it as a **Custom Profile** Library Item. Assign the application and profile to the same small test population using the organization's Blueprint workflow. Verify that the uploaded payload preserves the forced preference string/domain. [Kandji Custom Profiles](https://support.kandji.io/kb/custom-profiles-overview)
+2. Add a **Custom App** Library Item and upload the PKG. Iru (formerly Kandji) documents support for PKG, DMG and ZIP installers. Use the existing app's bundle identifier and verify version/detection behavior in a narrow test Blueprint before wider assignment. Use the PKG path for parity with Jamf. Iru documents that a DMG should contain only the app; our drag-to-Applications DMG also includes an Applications link and is not the recommended Iru upload. [Iru Custom Apps](https://support.iru.io/kb/deploying-custom-apps)
+3. Validate a reviewed policy with the diagnostics CLI, generate the `.mobileconfig`, and add it as a **Custom Profile** Library Item. Assign the application and profile to the same small test population using the organization's Blueprint workflow. Verify that the uploaded payload preserves the forced preference string/domain. [Iru Custom Profiles](https://support.iru.io/kb/custom-profiles-overview)
 4. Launch the app in the enrolled user's session and verify that it shows managed configuration and disables policy editing. Check an approved model alias and a denied local override. Root execution of a script does not prove this behavior.
-5. If script-based readiness is desired, deploy the shared `scripts/mdm-readiness.sh` plus a reviewed, credential-free policy JSON to controlled paths, then invoke it with the installed app and explicit policy path. Use an audit-only Custom Script; do not configure automatic remediation around preview failures. Kandji records stdout/stderr in audit information, so keep output content-free. [Kandji Custom Scripts](https://support.kandji.io/kb/custom-scripts-overview)
+5. If script-based readiness is desired, deploy the shared `scripts/mdm-readiness.sh` plus a reviewed, credential-free policy JSON to controlled paths, then invoke it with the installed app and explicit policy path. Use an audit-only Custom Script; do not configure automatic remediation around preview failures. Iru records stdout/stderr in audit information, so keep output content-free. [Iru Custom Scripts](https://support.iru.io/kb/custom-scripts-overview)
 6. Test updates, invalid policy, removal, rollback and user-session behavior with the same acceptance criteria as the Jamf test plan. Record actual results in a new validation record, not by changing the support label based on artifact lint alone.
 
 ## Readiness check semantics
@@ -36,8 +36,8 @@ The report's `managed` value is false when using `--config` because it validates
 - Actual forced preference precedence inside the sandboxed app, including malformed/removal cases.
 - User OAuth/Keychain behavior after MDM installation and updates.
 
-Do not work around an installation failure by stripping quarantine or disabling Gatekeeper. Diagnose signing/notarization and validate the supported distribution path. No Kandji API integration or automatic tenant configuration is implemented or required.
+Do not work around an installation failure by stripping quarantine or disabling Gatekeeper. Diagnose signing/notarization and validate the supported distribution path. No Iru API integration or automatic tenant configuration is implemented or required.
 
 ## Vendor documentation freshness
 
-The official Kandji pages consulted on 2026-09-23 display a migration notice to Iru with a December 1, 2026 deadline. Keep the requested Kandji terminology for this support path, but recheck current vendor/tenant workflows before the first deployment. The shared macOS artifact contract avoids coupling the app to either branding or a vendor API.
+Kandji rebranded to Iru as of 2026-09-24, with a migration deadline of December 1, 2026. Vendor documentation and support sites migrated to iru.io. The shared macOS artifact contract avoids coupling the app to either branding or a vendor API. Refer to Iru (formerly Kandji) in documentation to acknowledge the historical context.
