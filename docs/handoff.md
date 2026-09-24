@@ -1,6 +1,6 @@
 # Agent handoff — read this first
 
-Last updated: 2026-09-23. Current work: documentation and GitHub bootstrap completed; checking hosted CI and recording its outcome.
+Last updated: 2026-09-23. Current work complete: durable documentation, public GitHub bootstrap, Jamf/Kandji planning and green hosted CI. Next implementation: WORK-001 / issue #1.
 
 ## Owner instructions that persist
 
@@ -14,7 +14,7 @@ The first implementation is a native developer preview. It includes app/UI, conf
 
 The implementation was locally validated with 16 tests and an explicitly labeled mock HTTP response from the sandboxed app. There is no real model benchmark, live LiteLLM/MCP/OAuth evidence, or real Jamf enrollment evidence. DMG/PKG scripts exist but production signing/notarization/installation is pending.
 
-Public repository: https://github.com/jsbonsai/minimodeLL. Foundation commit `283ad43` was pushed to `main`, with `origin` tracking the GitHub repository. Issues #1–#8 track WORK-001 through WORK-008. The initial hosted CI run is https://github.com/jsbonsai/minimodeLL/actions/runs/35936009136; it was running when this checkpoint was written. A follow-up commit makes fake-inference tests independent of hosted-runner RAM and adds a dedicated memory admission regression test. Check the latest session completion record and `gh run list` for the final observed CI result.
+Public repository: https://github.com/jsbonsai/minimodeLL. Foundation commit `283ad43` was pushed to `main`, with `origin` tracking the GitHub repository. Issues #1–#8 track WORK-001 through WORK-008. Initial CI run https://github.com/jsbonsai/minimodeLL/actions/runs/35936009136 failed because fake inference inherited the real starter model RAM requirement. Commit `3689e10` fixes the fixture and adds a dedicated memory admission regression test. Corrected run: https://github.com/jsbonsai/minimodeLL/actions/runs/35936172136 **passed** for commit `3689e10`, including 16 tests, both policy examples, app packaging, shared MDM readiness and profile lint. The final checkpoint commit changes Markdown documentation only; CI intentionally skips Markdown-only changes.
 
 ## Resume sequence
 
@@ -52,3 +52,7 @@ Original checkout: `~/dev/minimodel` (directory name is intentionally still the 
 ## Required handoff maintenance
 
 Before stopping, update this document with the new active checkpoint, next action, blockers, relevant branch/PR/CI references, running local processes and uncommitted changes. Add a session record and update state/backlog/ADRs as needed. Avoid embedding the current commit's own hash in a file inside that commit; use Git history or reference the preceding checkpoint.
+
+## End-of-session operational state
+
+All authorized source/documentation changes are committed and pushed to origin/main at the end of this session; verify with Git on resume. No new inference/mock servers or benchmark processes were started during the documentation session. The preview app may still be open from the earlier implementation session. There are no credentials or live service endpoints in the repository. Eight GitHub issues preserve the next work; begin with https://github.com/jsbonsai/minimodeLL/issues/1 unless the owner redirects priorities.

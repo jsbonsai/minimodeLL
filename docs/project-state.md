@@ -25,7 +25,7 @@ The app name is minimodeLL. It must remain easy to rename. The standalone app co
 | Audit | Metadata JSONL and OSLog, bounded local retention | Payload-shape and write-failure tests; fixture run | Richer provenance/outcome events and optional central export |
 | Diagnostics | CLI policy validation, RAM/OS, eligible model IDs | Both examples pass on development Mac | Connectivity or performance qualification runner |
 | Packaging | Ad-hoc sandboxed .app; DMG/PKG scripts | .app signature and launch verified | DMG/PKG install, Developer ID, notarization, clean-machine checks |
-| Open source | MIT, contributor/security docs, CI definition | Files reviewed locally | Hosted CI result and ongoing maintainer/release practices |
+| Open source | Public GitHub repo, MIT, contributor/security docs, CI and eight work issues | Foundation and follow-up commits pushed; all 16 tests and packaging/management checks pass in hosted CI | Production release practices pending; green run linked from handoff |
 
 ## Actual local checkpoint
 

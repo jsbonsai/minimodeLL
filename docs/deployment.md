@@ -41,3 +41,9 @@ The design supports both Jamf and Kandji through standard macOS PKG and forced-p
 Kandji is **best-effort and unvalidated**, with no available tenant or sandbox. Its [deployment guide](kandji.md) maps the shared artifacts to Custom Apps, Custom Profiles and optional Custom Scripts using vendor documentation. No Kandji API integration is needed by the app.
 
 `scripts/mdm-readiness.sh` accepts an app bundle and an explicit policy JSON path. It performs read-only signature and schema checks and can be invoked by either MDM. It does not validate the effective user profile or notarization; see the provider guide for exit codes and reporting limitations.
+
+| Path | Shared artifacts | Current evidence | Next validation |
+| --- | --- | --- | --- |
+| Standalone | Native app, local JSON, future production DMG | Packaged sandboxed UI and local fixture | Real runtime and clean-machine distribution |
+| Jamf | PKG, forced profile, inventory/readiness scripts | Local artifact/profile checks only | Focused owner/coworker sandbox worksheet |
+| Kandji | Same PKG/profile, shared readiness script | Official-documentation review and local artifact checks | Best-effort until an actual tenant is available |

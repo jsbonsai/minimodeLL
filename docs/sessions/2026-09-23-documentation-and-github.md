@@ -1,6 +1,6 @@
 # Session: durable documentation and GitHub bootstrap
 
-Date: 2026-09-23. Status: in progress until the completion record below is filled.
+Date: 2026-09-23. Status: completed.
 
 ## Owner request and scope
 
@@ -27,6 +27,10 @@ Official Kandji documentation also notes its Iru migration; the guide records th
 - Created public repository https://github.com/jsbonsai/minimodeLL and pushed foundation commit `283ad43` to main.
 - Created issues #1–#8 and linked them from the backlog. Added repository topics for discovery.
 - Reviewed staged paths, checked local Markdown links and scanned credential-like patterns; no matching credentials were found. Normalized whitespace in the historical PRDs so the staged diff check passes.
-- Initial hosted CI run: https://github.com/jsbonsai/minimodeLL/actions/runs/35936009136 (in progress at this checkpoint).
+- Initial hosted CI run: https://github.com/jsbonsai/minimodeLL/actions/runs/35936009136 failed with five test issues because the fake model inherited a 16 GB admission threshold on a smaller hosted runner. The log explicitly reported “This model requires more system memory.” The dependency build itself succeeded.
 - Found a portability concern while reviewing CI: fake inference tests inherited the starter model's 16 GB hardware requirement. Changed only the test fixture to a zero-memory fake model, and added a separate regression test requiring more than the executing machine's physical RAM. Production model requirements are unchanged.
 - Added the shared MDM readiness script to CI. All 16 tests passed locally. CI skips Markdown-only changes and has a 15-minute job timeout; the final hosted result is recorded below when available.
+
+Follow-up commit `3689e10` was pushed with the fixture fix, dedicated memory test, shared MDM readiness CI step and issue links. Corrected hosted run: https://github.com/jsbonsai/minimodeLL/actions/runs/35936172136. **Passed** in 1 minute 47 seconds. All 16 tests, both policy validations, sandboxed app packaging/signature check, shared MDM readiness and generated profile lint succeeded.
+
+The readiness script also returned the documented failure codes locally (usage: 2; missing app: 1). Hosted CI emitted a nonblocking checkout-action Node runtime deprecation annotation; updating the checkout action is future maintenance, not a failed gate. The final Markdown-only checkpoint records successful CI and does not rerun the build by design. All commits are pushed to main; no new local server remains running from this session. Next work is WORK-001 / issue #1.

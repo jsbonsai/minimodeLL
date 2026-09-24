@@ -30,7 +30,7 @@ Record correct-tool rate, argument accuracy, final-answer support in the returne
 - Exact tokenizer/template accounting and pressure-aware local admission.
 - Cancellation and timeout against slow/nonresponsive HTTP and MCP servers.
 - MCP transport response byte limits before buffering; validate redirects and discovery trust boundaries.
-- Managed policy delivery, removal and invalid-policy behavior on real Jamf enrolled devices.
+- Managed policy delivery, removal and invalid-policy behavior on real Jamf enrolled devices, following docs/jamf-test-plan.md. Repeat independently in Kandji if a tenant becomes available; keep Kandji explicitly unvalidated until then.
 - Sandbox, Keychain persistence and OAuth callback behavior under stable Developer ID signing.
 - Accessibility, menu bar lifecycle, sleep/wake, logout, crash recovery and clean uninstall.
 - Notarized DMG and PKG installation on clean machines.
