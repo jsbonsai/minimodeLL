@@ -65,14 +65,16 @@ Run `python3 scripts/mock-inference.py`, then submit a short request in the app.
 
 ### Connect inference
 
-This preview connects to an existing `llama-server`; it does not yet bundle or download the runtime or models. Start a tool-capable GGUF with a tested template and bounded context, for example:
+**Bundled runtime and a verified model (developer preview).** Run `scripts/fetch-runtime.sh` and then `REQUIRE_RUNTIME=1 scripts/package-app.sh`. The packaged app then carries a pinned, hash-verified `llama-server` (ADR 0008). Use `Config/bundled-runtime.example.json` as your configuration, which references the built-in artifact `qwen3-4b-instruct-2507-q4_k_m` (Qwen3-4B-Instruct-2507 Q4_K_M, Apache-2.0, 2.5 GB). Open Settings → Models and choose **Download**, or **Import** a copy you already have. The app checks the file's size and SHA-256 before it can be used (ADR 0009). The app downloads nothing until you ask. One M1 Pro/32 GB run measured about 1 s to load and about 41 tokens/s; see `docs/validation-results.md`. That is a single-machine measurement, not a support claim.
+
+**External server.** You can also connect to an `llama-server` you start yourself. Start a tool-capable GGUF with a tested template and bounded context, for example:
 
 ```sh
 llama-server --model /path/to/approved.gguf --alias local-model \
   --host 127.0.0.1 --port 9931 --ctx-size 8192 --parallel 1 --jinja
 ```
 
-This example exposes inference to other local processes. For authenticated local inference, use llama-server's API-key configuration, add a `credentialAccount` to the local provider, and save the matching token in the app's Credentials tab. Enterprise releases must ship a pinned, signed runtime with app-controlled authentication and lifecycle.
+This example exposes inference to other local processes. For authenticated local inference, use llama-server's API-key configuration, add a `credentialAccount` to the local provider, and save the matching token in the app's Credentials tab. The bundled runtime above does this for you: a random loopback port and a per-launch key.
 
 The starter configuration expects the alias `local-model`. Open Settings → Configuration to edit it. A model stub is an approved provider model ID plus its context and memory requirements; it is not a downloaded model or proof of model quality.
 
@@ -129,4 +131,4 @@ See [architecture](docs/architecture.md), [security](SECURITY.md), [roadmap](doc
 
 ## License
 
-MIT. Dependency and model licenses remain separate. No model weights or inference runtime are redistributed in this preview. Geist and Geist Mono are distributed under the SIL Open Font License; see `design-assets/minimodeLL-brand/fonts/OFL.txt`.
+MIT. Dependency and model licenses remain separate. No model weights or prebuilt app binaries are published in this preview; a locally packaged app embeds the MIT-licensed llama.cpp runtime together with its license. Geist and Geist Mono are distributed under the SIL Open Font License; see `design-assets/minimodeLL-brand/fonts/OFL.txt`.

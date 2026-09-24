@@ -4,12 +4,68 @@ public enum AgentError: Error, LocalizedError, Sendable {
     case rejected(String)
     public var errorDescription: String? { switch self { case .rejected(let reason): reason } }
 }
-public struct ProviderSpec: Codable, Sendable, Identifiable {
-    public enum Kind: String, Codable, Sendable { case local, litellm }
+public struct ProviderSpec: Codable, Sendable, Identifiable, Equatable {
+    /// `local`: an externally started loopback server. `litellm`: an HTTPS gateway.
+    /// `managed`: the app-owned bundled llama-server (ADR 0008); it has no configured URL.
+    public enum Kind: String, Codable, Sendable { case local, litellm, managed }
     public let id: String
     public let kind: Kind
-    public let baseURL: URL
+    /// Required for `local` and `litellm`; must be absent for `managed` (the app picks a loopback port per launch).
+    public let baseURL: URL?
     public let credentialAccount: String?
+    /// Required for `managed`; must be absent otherwise.
+    public let runtime: ManagedRuntimeSpec?
+    public init(id: String, kind: Kind, baseURL: URL?, credentialAccount: String? = nil, runtime: ManagedRuntimeSpec? = nil) {
+        self.id = id; self.kind = kind; self.baseURL = baseURL; self.credentialAccount = credentialAccount; self.runtime = runtime
+    }
+}
+extension ProviderSpec.Kind {
+    /// Inference runs on this Mac, so physical-memory eligibility applies.
+    public var isOnDevice: Bool { self != .litellm }
+}
+/// Policy for the app-owned bundled runtime. Context size comes from the provider's single model stub.
+/// Set exactly one of `artifact` (a verified catalog entry, ADR 0009) or `modelFile` (legacy, unverified).
+public struct ManagedRuntimeSpec: Codable, Sendable, Equatable {
+    /// ID of an approved artifact in the effective model catalog. The file must pass size and SHA-256 verification.
+    public let artifact: String?
+    /// Legacy (ADR 0008): a GGUF file name inside the app's `Models` folder, used WITHOUT hash verification.
+    /// Kept for backward compatibility and development smoke tests; prefer `artifact`.
+    public let modelFile: String?
+    /// llama-server `--parallel` slots. Default 1.
+    public let parallel: Int?
+    /// Seconds to wait for authenticated readiness before failing. Default 120.
+    public let startupTimeoutSeconds: Int?
+    /// Seconds without inference before the runtime stops to free memory. 0 disables. Default 900.
+    public let idleUnloadSeconds: Int?
+    public init(modelFile: String, parallel: Int? = nil, startupTimeoutSeconds: Int? = nil, idleUnloadSeconds: Int? = nil) {
+        self.artifact = nil; self.modelFile = modelFile; self.parallel = parallel
+        self.startupTimeoutSeconds = startupTimeoutSeconds; self.idleUnloadSeconds = idleUnloadSeconds
+    }
+    public init(artifact: String, parallel: Int? = nil, startupTimeoutSeconds: Int? = nil, idleUnloadSeconds: Int? = nil) {
+        self.artifact = artifact; self.modelFile = nil; self.parallel = parallel
+        self.startupTimeoutSeconds = startupTimeoutSeconds; self.idleUnloadSeconds = idleUnloadSeconds
+    }
+    public var effectiveParallel: Int { parallel ?? 1 }
+    public var effectiveStartupTimeoutSeconds: Int { startupTimeoutSeconds ?? 120 }
+    public var effectiveIdleUnloadSeconds: Int { idleUnloadSeconds ?? 900 }
+    func validate() throws {
+        switch (artifact, modelFile) {
+        case (let artifact?, nil):
+            guard artifact.range(of: "^[A-Za-z0-9_.-]{1,64}$", options: .regularExpression) != nil else {
+                throw AgentError.rejected("Managed runtime artifact must be a model catalog ID.")
+            }
+        case (nil, let modelFile?):
+            guard ModelArtifact.isPlainModelFileName(modelFile) else {
+                throw AgentError.rejected("Managed runtime modelFile must be a plain .gguf file name in the Models folder.")
+            }
+        default:
+            throw AgentError.rejected("Managed runtime needs exactly one of artifact or modelFile.")
+        }
+        guard (1...4).contains(effectiveParallel), (5...600).contains(effectiveStartupTimeoutSeconds),
+              effectiveIdleUnloadSeconds == 0 || (60...86400).contains(effectiveIdleUnloadSeconds) else {
+            throw AgentError.rejected("Managed runtime settings are outside the supported bounds.")
+        }
+    }
 }
 public struct ModelSpec: Codable, Sendable, Identifiable {
     public let id: String
@@ -46,6 +102,8 @@ public struct AgentConfiguration: Codable, Sendable {
     public let models: [ModelSpec]
     public let mcpServers: [MCPServerSpec]
     public let limits: RunLimits
+    /// Optional approved model artifacts and download hosts (ADR 0009). Absent: the built-in catalog.
+    public let modelCatalog: ModelCatalogSpec?
     public func validate() throws {
         guard schemaVersion == 1 else { throw AgentError.rejected("Unsupported configuration version.") }
         guard !models.isEmpty, Set(models.map(\.id)).count == models.count,
@@ -61,8 +119,35 @@ public struct AgentConfiguration: Codable, Sendable {
         guard mcpServers.reduce(0, { $0 + $1.tools.count }) <= 16 else {
             throw AgentError.rejected("Approve at most 16 tools in a task configuration.")
         }
+        let catalog = effectiveCatalog
+        try catalog.validate()
         for provider in providers {
-            try Self.validateEndpoint(provider.baseURL, local: provider.kind == .local)
+            switch provider.kind {
+            case .local, .litellm:
+                guard let url = provider.baseURL, provider.runtime == nil else {
+                    throw AgentError.rejected("Provider \(provider.id) needs a baseURL and no runtime block.")
+                }
+                try Self.validateEndpoint(url, local: provider.kind == .local)
+            case .managed:
+                guard provider.baseURL == nil, provider.credentialAccount == nil, let runtime = provider.runtime else {
+                    throw AgentError.rejected("Managed provider \(provider.id) needs a runtime block and no baseURL or credential.")
+                }
+                try runtime.validate()
+                // One process serves one model file; its context size comes from exactly one stub.
+                let stubs = models.filter { $0.providerID == provider.id }
+                guard stubs.count == 1 else {
+                    throw AgentError.rejected("Managed provider \(provider.id) must be used by exactly one model stub.")
+                }
+                if let id = runtime.artifact {
+                    // Fail closed: an artifact outside the effective (policy or built-in) catalog is not approved.
+                    guard let artifact = catalog.artifact(id: id) else {
+                        throw AgentError.rejected("Managed provider \(provider.id) references an unapproved model artifact.")
+                    }
+                    guard stubs[0].contextTokens <= artifact.contextTokens, stubs[0].minimumMemoryGB >= artifact.minimumMemoryGB else {
+                        throw AgentError.rejected("Model stub \(stubs[0].id) exceeds the context or understates the memory approved for \(id).")
+                    }
+                }
+            }
         }
         for model in models {
             guard providers.contains(where: { $0.id == model.providerID }),

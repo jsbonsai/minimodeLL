@@ -64,6 +64,6 @@ Adding a configuration field means updating the Codable type, validation, both e
 - **Credentials**: Keychain only (`Credentials.swift`), including the MCP SDK `TokenStorage` adapter; OAuth storage is bound to endpoint + client ID hash. No client secrets for native OAuth.
 - **Audit/logging**: JSONL + OSLog contain metadata only (timestamp, run ID, event, model/server/tool IDs). Never log prompts, responses, tool args/results, tokens, or raw remote error bodies.
 - **Packaging**: don't put SwiftPM resource bundles at the `.app` root (breaks sealing); branding goes in `Contents/Resources`. Entitlements are in `packaging/App.entitlements`.
-- No models or inference runtime ship with the repo; the app talks to an externally started `llama-server` (alias `local-model`, port 9931) or an HTTPS LiteLLM gateway.
+- No models or inference binaries are committed. The app talks to an externally started `llama-server` (`local` provider, alias `local-model`, port 9931), an HTTPS LiteLLM gateway, or — in a packaged build made after `scripts/fetch-runtime.sh` — its own bundled, pinned `llama-server` (`managed` provider; ADR 0008, `Runtime.swift`, `minimodell --runtime-smoke-test`). Managed providers should reference a verified catalog artifact (`runtime.artifact`; ADR 0009, `ModelCatalog.swift`, `ModelStore.swift`, Settings → Models, `minimodell --model-download`); files are size+SHA-256 verified before use.
 
 `prd.md` / `prd-addendum.md` are historical; `docs/decisions/` ADRs supersede them. `docs/code-map.md` has a per-file responsibility table.

@@ -1,6 +1,6 @@
 # Focused Jamf sandbox validation plan
 
-Status: planned; no enrolled-device tests have run. The owner has a Jamf environment and a coworker can provide a narrowly scoped sandbox test. Use that as the first live MDM validation path. Kandji remains best-effort until a separate environment is available.
+Status: planned; no enrolled-device tests have run. The owner has a Jamf environment and a coworker can provide a narrowly scoped sandbox test. Use that as the first live MDM validation path. Iru (formerly Kandji) remains best-effort until a separate environment is available.
 
 ## Prepare a scoped test
 
@@ -28,6 +28,6 @@ A long-running request test should use a controlled local fixture and record tha
 
 ## Evidence and promotion
 
-Create a dated result under `docs/sessions/` or a dedicated validation record, with pass/fail per row and links to the tested commit. Update `docs/project-state.md`, `docs/validation-results.md` and WORK-006 with the actual evidence. Mark partial runs as partial. Do not infer Kandji validation from Jamf success.
+Create a dated result under `docs/sessions/` or a dedicated validation record, with pass/fail per row and links to the tested commit. Update `docs/project-state.md`, `docs/validation-results.md` and WORK-006 with the actual evidence. Mark partial runs as partial. Do not infer Iru (formerly Kandji) validation from Jamf success.
 
 Subsequent tests can cover local runtime provisioning, approved artifacts, read-only MCP workflows and user-session performance diagnostics after those capabilities exist. The current app still uses an external inference server and the diagnostics CLI is not a benchmark runner.

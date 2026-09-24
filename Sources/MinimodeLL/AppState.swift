@@ -15,9 +15,34 @@ final class AppState {
     var credentialAccount = ""
     var credentialValue = ""
     var settingsNotice = ""
+    var runtimeState: RuntimeState = .stopped
+    var artifactStatuses: [String: ArtifactStatus] = [:]
+    var modelNotice = ""
     private var runningTask: Task<Void, Never>?
     private let browser = BrowserAuthorization()
-    init() { reload() }
+    /// Verified model files in the container's Models folder (ADR 0009).
+    let modelStore: ModelStore
+    /// App-owned bundled llama-server for `managed` providers (ADR 0008).
+    let runtime: RuntimeManager
+    init() {
+        let store = ModelStore()
+        modelStore = store
+        runtime = RuntimeManager(modelStore: store)
+        reload()
+        let runtime = runtime
+        Task { [weak self] in
+            for await state in await runtime.updates() { self?.runtimeState = state }
+        }
+        Task { [weak self] in
+            for await statuses in await store.updates() { self?.artifactStatuses = statuses }
+        }
+        // Never leave the helper running after the app quits.
+        NotificationCenter.default.addObserver(forName: NSApplication.willTerminateNotification, object: nil, queue: nil) { _ in
+            runtime.terminateForQuit()
+        }
+    }
+    var usesManagedRuntime: Bool { provider?.kind == .managed }
+    func stopRuntime() { Task { await runtime.stop() } }
     var model: ModelSpec? { snapshot?.configuration.models.first { $0.id == selectedModel } }
     var provider: ProviderSpec? { snapshot?.configuration.providers.first { $0.id == model?.providerID } }
     var memoryGB: UInt64 { ProcessInfo.processInfo.physicalMemory / 1_073_741_824 }
@@ -32,6 +57,10 @@ final class AppState {
             let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
             policyText = String(decoding: try encoder.encode(loaded.configuration), as: UTF8.self)
             error = nil
+            // Policy no longer allows the bundled runtime: release its memory now.
+            if !loaded.configuration.providers.contains(where: { $0.kind == .managed }) { stopRuntime() }
+            let artifacts = loaded.configuration.effectiveCatalog.artifacts
+            Task { await modelStore.refresh(artifacts) }
         } catch {
             snapshot = nil
             self.error = "Configuration could not be loaded. Check config.json or the managed PolicyJSON."
@@ -60,9 +89,7 @@ final class AppState {
         let previousProvider = provider
         reload()
         guard let snapshot, let provider else { return }
-        guard selectedModel == previousModel,
-              provider.kind == previousProvider?.kind,
-              provider.baseURL == previousProvider?.baseURL else {
+        guard selectedModel == previousModel, provider == previousProvider else {
             error = "Your model policy changed. Review the selected model and destination, then submit again."
             return
         }
@@ -71,7 +98,10 @@ final class AppState {
         let modelID = selectedModel
         runningTask = Task {
             let connections = MCPConnections(servers: snapshot.configuration.mcpServers, authorizationDelegate: browser)
-            let runner = TaskRunner(inference: CompatibleInferenceClient(provider: provider), tools: connections)
+            let inference: any InferenceClient = provider.kind == .managed
+                ? ManagedInferenceClient(runtime: runtime, provider: provider, artifact: snapshot.configuration.artifact(for: provider))
+                : CompatibleInferenceClient(provider: provider)
+            let runner = TaskRunner(inference: inference, tools: connections)
             do {
                 result = try await runner.run(input: input, modelID: modelID, configuration: snapshot.configuration) { [weak self] proposal in
                     await self?.requestApproval(proposal) ?? false
@@ -88,6 +118,39 @@ final class AppState {
         }
     }
     func cancel() { runningTask?.cancel() }
+
+    // MARK: Models (ADR 0009). The store enforces catalog membership, hosts, disk space and hashes.
+    var catalog: ModelCatalog? { snapshot?.configuration.effectiveCatalog }
+    /// The artifact the selected managed provider runs, if any.
+    var activeArtifactID: String? { provider.flatMap { snapshot?.configuration.artifact(for: $0)?.id } }
+    func status(of artifact: ModelArtifact) -> ArtifactStatus { artifactStatuses[artifact.id] ?? .notInstalled }
+    func download(_ artifact: ModelArtifact) {
+        guard let catalog else { return }
+        modelNotice = ""
+        Task {
+            do { try await modelStore.download(artifact, catalog: catalog) }
+            catch is CancellationError { modelNotice = "Download cancelled." }
+            catch { modelNotice = (error as? AgentError)?.localizedDescription ?? "The download failed." }
+        }
+    }
+    func cancelDownload(_ artifact: ModelArtifact) { Task { await modelStore.cancel(artifact.id) } }
+    func delete(_ artifact: ModelArtifact) {
+        modelNotice = ""
+        Task {
+            // Release the file (and its memory) before removing it.
+            if activeArtifactID == artifact.id { await runtime.stop() }
+            await modelStore.delete(artifact)
+        }
+    }
+    func importModel(_ artifact: ModelArtifact, from url: URL) {
+        guard let catalog else { return }
+        modelNotice = ""
+        Task {
+            do { try await modelStore.importFile(url, as: artifact, catalog: catalog); modelNotice = "\(artifact.displayName) imported and verified." }
+            catch is CancellationError { modelNotice = "Import cancelled." }
+            catch { modelNotice = (error as? AgentError)?.localizedDescription ?? "The import failed." }
+        }
+    }
     func decide(_ accepted: Bool) { approval = accepted; proposal = nil }
     private func requestApproval(_ proposed: ToolProposal) async -> Bool {
         approval = nil; proposal = proposed

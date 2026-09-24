@@ -13,4 +13,6 @@ All initial decisions were recorded on 2026-09-23 from the implementation and ow
 | [0005](0005-mcp-and-native-oauth.md) | Official Swift MCP SDK and public native OAuth | Accepted; live interoperability pending |
 | [0006](0006-audit-and-validation.md) | Content-free audit and evidence-based validation | Accepted |
 | [0007](0007-branding-and-distribution.md) | Central branding, stable identity, DMG and optional PKG | Accepted; production distribution pending |
+| [0008](0008-bundled-runtime-lifecycle.md) | App-owned, pinned, sandbox-inheriting llama-server helper with authenticated readiness | Accepted; readiness slice implemented, Developer ID path pending |
+| [0009](0009-model-artifact-manifest.md) | Verified model artifact manifest, model store, and first approved model (Qwen3-4B-Instruct-2507 Q4_K_M) | Accepted; trimmed WORK-002 slice implemented, shared read-only artifacts and signed catalogs pending |
 | [0010](0010-static-site-generation.md) | Static website rendered from repository Markdown; Actions-based Pages deployment | Accepted; first deployment pending |

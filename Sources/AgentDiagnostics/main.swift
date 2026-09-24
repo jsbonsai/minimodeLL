@@ -28,12 +28,12 @@ do {
     let memory = ProcessInfo.processInfo.physicalMemory / 1_073_741_824
     let eligible = config.models.filter { model in
         let provider = config.providers.first { $0.id == model.providerID }
-        return provider?.kind == .litellm || model.minimumMemoryGB <= memory
+        return provider?.kind.isOnDevice == false || model.minimumMemoryGB <= memory
     }.map(\.id)
     let report = Report(operatingSystem: ProcessInfo.processInfo.operatingSystemVersionString,
                         architecture: "arm64", memoryGB: memory, configurationValid: true,
                         managed: snapshot?.managed ?? false, eligibleModelIDs: eligible,
-                        checks: ["schema", "endpoint-policy", "model-references", "run-limit-bounds", "physical-memory-eligibility"])
+                        checks: ["schema", "endpoint-policy", "model-references", "run-limit-bounds", "model-catalog", "physical-memory-eligibility"])
     let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     print(String(decoding: try encoder.encode(report), as: UTF8.self))
 } catch {

@@ -31,16 +31,33 @@ public struct FunctionTool: Encodable, Sendable {
 public protocol InferenceClient: Sendable {
     func complete(messages: [ChatMessage], tools: [FunctionTool], model: ModelSpec, limits: RunLimits) async throws -> ChatMessage
 }
-private final class RejectRedirects: NSObject, URLSessionTaskDelegate, Sendable {
+final class RejectRedirects: NSObject, URLSessionTaskDelegate, Sendable {
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void) {
         completionHandler(nil)
     }
 }
 public struct CompatibleInferenceClient: InferenceClient {
-    private let provider: ProviderSpec
-    public init(provider: ProviderSpec) { self.provider = provider }
+    private enum Credential: Sendable { case none, keychain(String), ephemeral(String) }
+    private let baseURL: URL?
+    private let local: Bool
+    private let credential: Credential
+    /// Configured `local` or `litellm` provider. A `managed` provider must use `init(endpoint:)`.
+    public init(provider: ProviderSpec) {
+        baseURL = provider.kind == .managed ? nil : provider.baseURL
+        local = provider.kind != .litellm
+        credential = provider.credentialAccount.map { .keychain($0) } ?? .none
+    }
+    /// App-owned runtime endpoint. The per-launch key is used only as a bearer header, never stored or logged.
+    public init(endpoint: RuntimeEndpoint) {
+        baseURL = endpoint.baseURL; local = true; credential = .ephemeral(endpoint.apiKey)
+    }
     public func complete(messages: [ChatMessage], tools: [FunctionTool], model: ModelSpec, limits: RunLimits) async throws -> ChatMessage {
+        try await completeMeasured(messages: messages, tools: tools, model: model, limits: limits).message
+    }
+    /// `complete` plus content-free usage/timing numbers when the server reports them (llama-server does).
+    public func completeMeasured(messages: [ChatMessage], tools: [FunctionTool], model: ModelSpec,
+                                 limits: RunLimits) async throws -> (message: ChatMessage, metrics: CompletionMetrics?) {
         struct Request: Encodable {
             let model: String
             let messages: [ChatMessage]
@@ -52,16 +69,23 @@ public struct CompatibleInferenceClient: InferenceClient {
         struct Response: Decodable {
             struct Choice: Decodable { let message: ChatMessage; let finish_reason: String? }
             let choices: [Choice]
+            let usage: CompletionMetrics.Usage?
+            let timings: CompletionMetrics.Timings?
         }
-        try AgentConfiguration.validateEndpoint(provider.baseURL, local: provider.kind == .local)
-        var request = URLRequest(url: provider.baseURL.appendingPathComponent("chat/completions"))
+        guard let baseURL else { throw AgentError.rejected("The local model runtime is not ready.") }
+        try AgentConfiguration.validateEndpoint(baseURL, local: local)
+        var request = URLRequest(url: baseURL.appendingPathComponent("chat/completions"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let account = provider.credentialAccount {
+        switch credential {
+        case .none: break
+        case .keychain(let account):
             guard let token = try CredentialStore.read(account: account), !token.isEmpty else {
                 throw AgentError.rejected("Save the credential for \(account) in Settings first.")
             }
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        case .ephemeral(let key):
+            request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
         }
         request.httpBody = try JSONEncoder().encode(Request(model: model.model, messages: messages,
             tools: tools.isEmpty ? nil : tools, max_tokens: limits.outputTokens))
@@ -86,8 +110,28 @@ public struct CompatibleInferenceClient: InferenceClient {
         guard choice.finish_reason != "length" else {
             throw AgentError.rejected("The model reached the output limit. Try a smaller task.")
         }
-        return choice.message
+        let metrics = result.usage == nil && result.timings == nil ? nil : CompletionMetrics(usage: result.usage, timings: result.timings)
+        return (choice.message, metrics)
     }
+}
+
+/// Token counts and server-side timings. Numbers only; never content.
+public struct CompletionMetrics: Codable, Sendable {
+    public struct Usage: Codable, Sendable {
+        public let prompt_tokens: Int?
+        public let completion_tokens: Int?
+    }
+    /// llama-server extension to the OpenAI response.
+    public struct Timings: Codable, Sendable {
+        public let prompt_n: Int?
+        public let prompt_ms: Double?
+        public let prompt_per_second: Double?
+        public let predicted_n: Int?
+        public let predicted_ms: Double?
+        public let predicted_per_second: Double?
+    }
+    public let usage: Usage?
+    public let timings: Timings?
 }
 
 public enum ContextBudget {

@@ -17,7 +17,18 @@ jobs:
       - run: swift test
       - run: swift run minimodell-diagnostics --config Config/local.example.json
       - run: swift run minimodell-diagnostics --config Config/enterprise.example.json
-      - run: scripts/package-app.sh
+      - run: swift run minimodell-diagnostics --config Config/bundled-runtime.example.json
+      - name: Package without bundled runtime (external-server mode)
+        run: scripts/package-app.sh
+      - name: Fetch pinned llama.cpp runtime (SHA-256 verified)
+        run: scripts/fetch-runtime.sh
+      - name: Package with bundled runtime and verify nested signatures
+        run: |
+          REQUIRE_RUNTIME=1 scripts/package-app.sh
+          codesign --verify --strict --deep --verbose=2 build/minimodeLL.app
+          codesign -d --entitlements - build/minimodeLL.app/Contents/Helpers/llama-server | grep -q com.apple.security.inherit
+          codesign -d --entitlements - build/minimodeLL.app/Contents/Helpers/minimodell-runtime-guard | grep -q com.apple.security.inherit
+          test -f build/minimodeLL.app/Contents/Resources/Licenses/llama.cpp.txt
       - run: bash -n scripts/mdm-readiness.sh
       - run: scripts/mdm-readiness.sh build/minimodeLL.app Config/enterprise.example.json
       - run: scripts/make-profile.py Config/enterprise.example.json build/minimodell.mobileconfig
