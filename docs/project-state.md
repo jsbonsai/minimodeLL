@@ -59,3 +59,7 @@ The app name is minimodeLL. It must remain easy to rename. The standalone app co
 ## Immediate next implementation
 
 Follow the ordered backlog. The recommended first feature is a pinned, authenticated, sandbox-compatible bundled llama.cpp lifecycle, with failure/cleanup tests before connecting company accounts. Model artifact management follows it. A runtime revision and model must be selected and qualified rather than guessed from the historical PRD.
+
+## Website and repository presentation
+
+A GitHub Pages landing/documentation site and README branding are planned in [website-plan.md](website-plan.md). The owner requested a documentation-only handoff before implementation. No site code or Pages deployment exists from this session; the Pages API returned 404 and the repository homepage was empty during discovery. PR #9 containing supplied assets was still open/unmerged. These are point-in-time observations, not permanent settings.

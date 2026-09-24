@@ -21,3 +21,5 @@ Do not include credentials, company message content, private endpoints or unnece
 - [2026-09-23: documentation and GitHub bootstrap](2026-09-23-documentation-and-github.md)
 
 - [2026-09-23: supplied brand assets](2026-09-23-brand-assets.md)
+
+- [2026-09-23: website plan and handoff](2026-09-23-website-plan.md)
