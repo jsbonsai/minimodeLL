@@ -6,6 +6,8 @@ No production release has been published. Version 0.1.0 identifies the current d
 
 ### Added
 
+- Supplied Twin L app and menu bar icons, adaptive brand palette, Geist typography and in-app branding; reproducible resource synchronization.
+
 - Native macOS SwiftUI task window, menu bar, settings, credential entry and tool approval review.
 - Shared Swift core with local/LiteLLM adapters, official MCP SDK integration and native OAuth/Keychain wiring.
 - Versioned approved model/provider/tool policy with optional complete forced MDM override.

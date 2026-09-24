@@ -1,6 +1,6 @@
 # Agent handoff — read this first
 
-Last updated: 2026-09-23. Current work complete: durable documentation, public GitHub bootstrap, Jamf/Kandji planning and green hosted CI. Next implementation: WORK-001 / issue #1.
+Last updated: 2026-09-23. Current checkpoint: website/repository branding **plan only**, at the owner’s explicit request to pause implementation for handoff. Read [website-plan.md](website-plan.md) first for this work. Native assets remain integrated on `feat/brand-assets` at preceding commit `6ed1938`, PR #9 (open/unmerged when inspected). No website has been built or deployed. Next major app implementation remains WORK-001 / issue #1.
 
 ## Owner instructions that persist
 
@@ -55,4 +55,10 @@ Before stopping, update this document with the new active checkpoint, next actio
 
 ## End-of-session operational state
 
-All authorized source/documentation changes are committed and pushed to origin/main at the end of this session; verify with Git on resume. No new inference/mock servers or benchmark processes were started during the documentation session. The preview app may still be open from the earlier implementation session. There are no credentials or live service endpoints in the repository. Eight GitHub issues preserve the next work; begin with https://github.com/jsbonsai/minimodeLL/issues/1 unless the owner redirects priorities.
+The documentation bootstrap was committed to origin/main. The subsequent branding update is on feat/brand-assets; inspect its PR/CI and branch before resuming. No new inference/mock servers or benchmark processes were started during the documentation session. The preview app may still be open from the earlier implementation session. There are no credentials or live service endpoints in the repository. Eight GitHub issues preserve the next work; begin with https://github.com/jsbonsai/minimodeLL/issues/1 unless the owner redirects priorities.
+
+The latest local app uses the supplied Twin L app/menu icons, in-app logo, adaptive palette and Geist fonts. It was restarted after the branding build and left open. This changes presentation/resources only; runtime/MCP limitations above still apply.
+
+## Latest owner steering: document the website plan only
+
+The owner asked for GitHub README/documentation branding and a GitHub-hosted landing/documentation site, then explicitly requested only a documented plan before another agent takes over. [Website plan](website-plan.md) contains the full proposed content, asset paths, architecture, publication options, dependency on unmerged PR #9, and exact resume steps. [Session record](sessions/2026-09-23-website-plan.md) records the actual discovery. Do not resume website implementation until the owner asks to continue. This documentation update stays on the existing branding branch; no hosting settings or app code were changed.

@@ -14,6 +14,9 @@ cp "$bin_path/minimodell" "$app_path/Contents/MacOS/minimodell"
 cp "$bin_path/minimodell-diagnostics" "$app_path/Contents/MacOS/minimodell-diagnostics"
 # Packaged app and diagnostics resolve this before the SwiftPM development resource.
 cp "$brand_file" "$app_path/Contents/Resources/Branding.json"
+# Curated resources shared with SwiftPM; do not place unsealed bundles at the app root.
+cp -R Sources/MinimodeLL/Resources/BrandAssets "$app_path/Contents/Resources/"
+cp Sources/MinimodeLL/Resources/BrandAssets/AppIcon.icns "$app_path/Contents/Resources/AppIcon.icns"
 mkdir -p "$app_path/Contents/Resources/Licenses"
 install -m 644 LICENSE "$app_path/Contents/Resources/Licenses/minimodell.txt"
 install -m 644 .build/checkouts/swift-sdk/LICENSE "$app_path/Contents/Resources/Licenses/mcp-swift-sdk.txt"
@@ -27,6 +30,7 @@ with open(path, 'wb') as f:
     plistlib.dump({
         'CFBundleName': name, 'CFBundleDisplayName': name,
         'CFBundleIdentifier': identifier, 'CFBundleExecutable': 'minimodell',
+        'CFBundleIconFile': 'AppIcon.icns',
         'CFBundlePackageType': 'APPL', 'CFBundleShortVersionString': version,
         'CFBundleVersion': '1', 'LSMinimumSystemVersion': '14.0',
         'LSUIElement': True, 'NSHighResolutionCapable': True,

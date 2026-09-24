@@ -13,7 +13,7 @@ The app name is minimodeLL. It must remain easy to rename. The standalone app co
 | Area | Implemented now | Evidence | Gap before production |
 | --- | --- | --- | --- |
 | Native app | SwiftUI window, menu bar, settings, result display, stop control | Packaged launch and UI inspection | Accessibility, sleep/wake, lifecycle and multi-window tests |
-| Branding | One bundled JSON source for display name/version/identity | Package/build succeeds | Identity migration strategy if forks rename deployed IDs |
+| Branding | Central identity JSON plus supplied app/menu icons, Twin L mark, adaptive palette and Geist fonts | Packaged branded workspace inspected after restart | Light/status variants need visual coverage; identity migration if forks rename deployed IDs |
 | Local inference | Chat Completions requests to configured literal loopback address | Labeled synthetic HTTP fixture from sandboxed UI | Real model/tool-template qualification; bundled runtime |
 | LiteLLM | Explicit HTTPS provider and gateway model alias | Compiles; config validator exercised | Live gateway authentication, payload compatibility and model tests |
 | MCP | Official SDK 0.12.1, Streamable HTTP, approved-tool discovery/execution | Compiles; runner tests use fake tools | Actual four-service compatibility and malicious/slow transport tests |
@@ -59,3 +59,7 @@ The app name is minimodeLL. It must remain easy to rename. The standalone app co
 ## Immediate next implementation
 
 Follow the ordered backlog. The recommended first feature is a pinned, authenticated, sandbox-compatible bundled llama.cpp lifecycle, with failure/cleanup tests before connecting company accounts. Model artifact management follows it. A runtime revision and model must be selected and qualified rather than guessed from the historical PRD.
+
+## Website and repository presentation
+
+A GitHub Pages landing/documentation site and README branding are planned in [website-plan.md](website-plan.md). The owner requested a documentation-only handoff before implementation. No site code or Pages deployment exists from this session; the Pages API returned 404 and the repository homepage was empty during discovery. PR #9 containing supplied assets was still open/unmerged. These are point-in-time observations, not permanent settings.

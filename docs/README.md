@@ -9,6 +9,8 @@ This project keeps implementation context in version control so a human or AI co
 | [Backlog](backlog.md) | Ordered work with acceptance criteria and dependencies | Work is opened, started, blocked, or completed |
 | [Architecture](architecture.md) | Component/data flow and implementation boundaries | Boundaries or execution flow change |
 | [Decisions](decisions/README.md) | Rationale, alternatives, and consequences | A consequential choice is made or revised |
+| [Website plan](website-plan.md) | Proposed GitHub Pages landing/docs and repository branding; not implemented | Website decisions or implementation progress |
+| [Branding](branding.md) | Supplied artwork, runtime mapping and status semantics | Visual identity/resources change |
 | [Code map](code-map.md) | File-level responsibilities and change entry points | Modules or ownership move |
 | [Configuration reference](configuration-reference.md) | Fields, defaults, constraints, and example semantics | Configuration or policy behavior changes |
 | [Development runbook](development.md) | Reproducible commands, fixture usage, known build issues | Build/debug workflow changes |

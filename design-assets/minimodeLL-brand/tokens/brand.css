@@ -1,0 +1,31 @@
+:root {
+  --mm-ink: #16181D;
+  --mm-graphite: #5B5F68;
+  --mm-mist: #E2E4DF;
+  --mm-paper: #F2F3EF;
+  --mm-signal: #3A5BD9;
+  --mm-running: #1F8A5B;
+  --mm-warning: #B7791F;
+  --mm-blocked: #C23B3B;
+
+  --mm-bg: var(--mm-paper);
+  --mm-surface: #FFFFFF;
+  --mm-text: var(--mm-ink);
+  --mm-text-muted: var(--mm-graphite);
+  --mm-border: var(--mm-mist);
+  --mm-accent: var(--mm-signal);
+
+  --mm-font-sans: Geist, -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  --mm-font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --mm-radius-sm: 6px; --mm-radius-md: 10px; --mm-radius-lg: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --mm-bg: #16181D;
+    --mm-surface: #22252C;
+    --mm-text: #F2F3EF;
+    --mm-text-muted: #A3A7AF;
+    --mm-border: #33363E;
+    --mm-accent: #7D96FF;
+  }
+}
