@@ -335,3 +335,13 @@ func invalidHeaderNamesAreRejected(_ name: String) {
         try await MCPServerProbe.discoverTools(policyServer, secretOverrides: ["x": "y"], managedPolicy: policy, factory: factory)
     }
 }
+
+@Test func typographicDashInHeaderValueGetsSpecificError() throws {
+    #expect(throws: Never.self) { try MCPHeaderPolicy.validateValue("ak_--Jg0synthetic", headerName: "X-API-Key") }
+    do {
+        try MCPHeaderPolicy.validateValue("ak_\u{2014}Jg0synthetic", headerName: "X-API-Key")
+        Issue.record("em dash accepted")
+    } catch {
+        #expect(error.localizedDescription.contains("typographic"))
+    }
+}
