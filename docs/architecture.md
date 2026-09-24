@@ -101,6 +101,16 @@ Only one tool call per response is accepted. Tool IDs, names, JSON arguments, co
 
 Supported schema constraints: object/array/string/integer/number/boolean/null types, properties, required, additionalProperties, items, enum, minimum/maximum, minLength/maxLength, minItems/maxItems. Descriptive metadata is accepted. Unsupported keywords (including `$ref`, `oneOf`, formats and patterns) reject the tool. Production interoperability should add a maintained full JSON Schema validator with conformance tests.
 
+## MCP server management (ADR 0012)
+
+Settings → MCP Servers (`MCPServersSettingsView.swift`) lists, adds, edits, enables/disables, deletes and tests HTTPS Streamable HTTP servers. All rules live in `LocalAgentCore`:
+
+- **Schema.** `MCPServerSpec` keeps its original keys and adds optional `enabled` (absent = enabled; disabled servers are never connected and do not count toward the 16-tool budget) and `headers`. The auth mode is derived: `oauth` → OAuth, `credentialAccount` → bearer, neither → none.
+- **Headers.** `MCPHeaderPolicy` enforces RFC 9110 token names, a reserved list (framing, protocol, session, cookie, proxy, `Sec-*`, `Mcp-*`), `Authorization` only when the auth mode is none and only as a secret, and injection-safe printable-ASCII values. A header is either an inline `value` (non-secret) or a `secretAccount` (Keychain).
+- **Transport.** `MCPTransportFactory` resolves header values and the bearer token from Keychain (or unsaved values during a test), validates them, and sets them in the SDK `HTTPClientTransport` `requestModifier`, which runs after the SDK's own protocol headers on POST and GET. Values are never logged.
+- **Editor.** `MCPServerStore` edits only the `mcpServers` array of the user `config.json`, validates the whole result before an atomic write, refuses every edit under a forced managed policy, keeps server IDs immutable, writes secrets only to accounts the edited server references, and deletes only Keychain items the server owned (`mcp.<id>.` prefix or its OAuth token account) that nothing else references.
+- **Test connection.** `MCPServerProbe` connects, lists tools (10 pages, 200 tools, 300-character descriptions), flags unsupported schemas, and disconnects. Under a forced policy only the policy's own server definitions can be tested. Offering a tool never approves it; the `tools` allowlist stays explicit.
+
 ## OAuth and transport
 
 The SDK handles protocol negotiation, discovery, PKCE, and token refresh. The UI supplies ASWebAuthenticationSession, retaining it until callback or cancellation. The app supplies Keychain persistence. Public native clients never receive a bundled shared secret. Streamable HTTP is supported; legacy HTTP+SSE requires a separate adapter if actual company servers need it.

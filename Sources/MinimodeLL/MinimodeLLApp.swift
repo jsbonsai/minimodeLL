@@ -169,7 +169,7 @@ struct WorkspaceView: View {
                       systemImage: "slider.horizontal.3")
                 VStack(alignment: .leading, spacing: 8) {
                     Text("CONNECTIONS").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                    if let servers = state.snapshot?.configuration.mcpServers, !servers.isEmpty {
+                    if let servers = state.snapshot?.configuration.mcpServers.filter(\.isEnabled), !servers.isEmpty {
                         ForEach(servers) { server in
                             Label(server.title, systemImage: "link").font(.callout)
                         }
@@ -266,6 +266,7 @@ struct SettingsView: View {
                 Text(state.settingsNotice).font(.caption)
             }.padding(24).tabItem { Label("Configuration", systemImage: "slider.horizontal.3") }
             ModelsSettings(state: state).padding(24).tabItem { Label("Models", systemImage: "cpu") }
+            MCPServersSettingsView(state: state).padding(24).tabItem { Label("MCP Servers", systemImage: "server.rack") }
             CommandBarSettings(controller: commandBar).padding(24).tabItem { Label("Command Bar", systemImage: "command") }
             Form {
                 Text("Credentials stay in your macOS Keychain.").font(.headline)

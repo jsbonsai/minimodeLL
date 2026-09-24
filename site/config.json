@@ -47,7 +47,8 @@
         {"source": "docs/decisions/0008-bundled-runtime-lifecycle.md", "slug": "decisions/0008-bundled-runtime-lifecycle", "title": "0008 Bundled runtime lifecycle"},
         {"source": "docs/decisions/0009-model-artifact-manifest.md", "slug": "decisions/0009-model-artifact-manifest", "title": "0009 Model artifact manifest"},
         {"source": "docs/decisions/0010-static-site-generation.md", "slug": "decisions/0010-static-site-generation", "title": "0010 Static site generation"},
-        {"source": "docs/decisions/0011-lan-inference-providers.md", "slug": "decisions/0011-lan-inference-providers", "title": "0011 LAN inference providers"}
+        {"source": "docs/decisions/0011-lan-inference-providers.md", "slug": "decisions/0011-lan-inference-providers", "title": "0011 LAN inference providers"},
+        {"source": "docs/decisions/0012-mcp-server-management-and-headers.md", "slug": "decisions/0012-mcp-server-management-and-headers", "title": "0012 MCP server management"}
       ]
     },
     {
