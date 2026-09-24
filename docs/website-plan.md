@@ -1,6 +1,24 @@
 # Repository branding and GitHub Pages plan
 
-Date: 2026-09-23. Status: **proposed; not implemented or deployed**.
+Date: 2026-09-23. Status: **implemented on branch `feat/site-and-readme`; deployment pending merge to `main`.** The sections below the status block are the original approved plan, kept for rationale.
+
+## Implementation status (2026-09-23, site stream)
+
+Built and verified locally; see the [session record](sessions/2026-09-23-site-and-readme.md) for the exact checks.
+
+| Plan item | Status |
+| --- | --- |
+| README branding: centered `<picture>` header (color lockup on light, reversed lockup on dark), badges, pitch, "Why" section, Iru (formerly Kandji) wording | Done in `README.md`; `docs/README.md` has a smaller header plus website/source/start links. GitHub rendering of the `<picture>` element is expected but not yet observed on `main`. |
+| Static site with brand tokens, Geist (OFL copied), light/dark, responsive, accessible, keyboard nav, OG/Twitter meta, favicons | Done under `site/`: hand-authored `index.html` and `404.html`, shared nav/footer partials, `assets/styles.css` derived from `tokens/brand.css`, `assets/site.js` (theme toggle, mobile nav, reduced-motion-aware reveal). |
+| Landing sections: hero with mark, tagline and CTAs; governance flow; feature grid; inline SVG architecture diagram; honest status/roadmap; getting started; footer | Done. The hero "task card" is labeled illustrative. Status copy distinguishes what works today from in-progress work and links issues #1, #2, #4, #6. |
+| Documentation rendered from Markdown at build time, not duplicated | Done: `site/build.py` (Python-Markdown 3.7, hash-pinned in `site/requirements-lock.txt`) renders the documents listed in `site/config.json` into `docs/<slug>/`, rewrites relative links (rendered targets become site links; everything else links to GitHub), adds heading anchors, an "Edit this page" link, sitemap, robots, manifest, `.nojekyll`. `site/check.py` verifies links, fragments, placeholders, and head metadata. Decision recorded in [ADR 0008](decisions/0008-static-site-generation.md). |
+| `.github/workflows/pages.yml` with `actions/upload-pages-artifact@v3` and `actions/deploy-pages@v4`, `pages: write` / `id-token: write` on the deploy job only, `concurrency: pages`, push-to-main path filter plus `workflow_dispatch`; pull requests build and check only | Done. Not yet run on `main`; the first deployment happens after merge. `ci.yml` now ignores `site/**` and `pages.yml` so website-only changes do not trigger the macOS build. |
+| Enable Pages with build type `workflow` | See the session record for the API call result. |
+| Repository description and topics | See the session record. |
+| Homepage URL and social preview image | Deferred until the site is deployed and inspected. Social preview is a UI-only upload: use `design-assets/minimodeLL-brand/social/banner-1200x630.png`. |
+| Post-deployment checks (live URL, social image URLs, README logos on GitHub, record in validation results) | Not performed; requires merge. |
+
+Expected URL after deployment, still not a live-site claim: `https://jsbonsai.github.io/minimodeLL/`.
 
 ## Owner request and latest instruction
 

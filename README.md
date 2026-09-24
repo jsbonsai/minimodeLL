@@ -1,8 +1,40 @@
-# minimodeLL
+<p align="center">
+  <a href="https://github.com/jsbonsai/minimodeLL">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="design-assets/minimodeLL-brand/logo/svg/lockup-horizontal-reversed.svg">
+      <source media="(prefers-color-scheme: light)" srcset="design-assets/minimodeLL-brand/logo/svg/lockup-horizontal-color.svg">
+      <img alt="minimodeLL — Twin L mark and wordmark" src="design-assets/minimodeLL-brand/logo/svg/lockup-horizontal-color.svg" width="440">
+    </picture>
+  </a>
+</p>
 
-A native macOS menu bar assistant for small workplace tasks, with local inference, approved model catalogs, and remote MCP tools. Organizations can add managed policy through Jamf or Kandji; individual users configure the same app themselves.
+<p align="center"><strong>Small tasks. On your Mac.</strong><br>
+A native macOS menu bar assistant for small workplace tasks, built so the people who run Macs can govern it.</p>
+
+<p align="center">
+  <a href="https://github.com/jsbonsai/minimodeLL/actions/workflows/ci.yml"><img alt="macOS validation" src="https://github.com/jsbonsai/minimodeLL/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/jsbonsai/minimodeLL/actions/workflows/pages.yml"><img alt="GitHub Pages" src="https://github.com/jsbonsai/minimodeLL/actions/workflows/pages.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-3A5BD9"></a>
+  <img alt="Platform: macOS 14+ on Apple Silicon" src="https://img.shields.io/badge/platform-macOS%2014%2B%20%C2%B7%20Apple%20Silicon-16181D">
+  <img alt="Swift 6.1" src="https://img.shields.io/badge/Swift-6.1-F05138">
+  <img alt="Status: developer preview" src="https://img.shields.io/badge/status-developer%20preview-B7791F">
+</p>
+
+---
+
+minimodeLL runs approved local models on the employee's own Mac, calls allowlisted MCP tools only after the person approves the actual arguments, and records every step as content-free audit metadata. What makes it different from a consumer local-model app is that IT can govern it: a complete policy (which providers, models, MCP servers, and tools, and which of those need a human first) can be forced through Jamf or Iru (formerly Kandji) as a managed preference, user settings can never extend a managed allowlist, invalid policy fails closed, and there is no silent cloud fallback. Explicit LiteLLM gateway models are supported when a data policy permits them, labeled in the UI before submission. The same app is fully usable without any MDM.
 
 **Status: developer preview.** The app and policy engine build on Apple Silicon. Unit tests use deterministic fake providers and tools. Live model quality, enterprise OAuth interoperability, notarization, and MDM behavior still require validation before production use.
+
+**Website and docs:** the landing page and rendered documentation are published from this repository by GitHub Actions (see [`site/`](site/README.md)); the [documentation map](docs/README.md) links every source document.
+
+## Why
+
+- **Policy is enforced in code, not in a prompt.** Model, server, and tool allowlists plus per-tool approval rules live in a typed, validated policy that a system prompt or MCP annotation cannot override.
+- **One task, one bounded run.** Fresh context per task, one tool call per model response, and hard limits on input, context, output, steps, result size, and wall time. No background work; writes are never retried automatically.
+- **Local by default, cloud only by choice.** Local providers must be literal loopback HTTP; remote providers must be HTTPS; inference redirects are refused. A LiteLLM gateway is an explicit, labeled selection, never a fallback.
+- **Governable at fleet scale.** The same JSON schema validates a user's `config.json` and an MDM-forced `PolicyJSON`; the repo generates the configuration profile and ships an offline diagnostics CLI for MDM scripts.
+- **Audit without content.** JSONL and OSLog carry timestamps, run IDs, event categories, and model/server/tool IDs. Prompts, responses, tool arguments, results, tokens, and raw remote error bodies are never logged.
 
 ## What works today
 
@@ -73,11 +105,17 @@ swift run minimodell-diagnostics --config Config/enterprise.example.json
 scripts/make-profile.py Config/enterprise.example.json build/minimodell.mobileconfig
 ```
 
-Upload the generated configuration profile to Jamf and scope it independently of the application PKG. This project has no dependency on the Jamf API. See [deployment](docs/deployment.md), the [Jamf sandbox test plan](docs/jamf-test-plan.md), [Kandji best-effort guide](docs/kandji.md), and [validation](docs/validation.md). Kandji has no tenant validation yet; Jamf validation is planned with a scoped sandbox.
+Upload the generated configuration profile to Jamf and scope it independently of the application PKG. This project has no dependency on the Jamf API. See [deployment](docs/deployment.md), the [Jamf sandbox test plan](docs/jamf-test-plan.md), the [Iru (formerly Kandji) best-effort guide](docs/kandji.md), and [validation](docs/validation.md). Iru has no tenant validation yet; Jamf validation is planned with a scoped sandbox.
 
 ## Branding
 
 Edit `Sources/LocalAgentCore/Resources/Branding.json` and rebuild to change the display name and version. All user-facing app names and package names use it. Keep `bundleIdentifier` stable once deployed: it anchors policy, OAuth callbacks, storage, and Keychain records. A distribution fork should establish its identifier before enrolling users.
+
+The Twin L mark, lockups, app and menu bar icons, web assets, fonts, and color tokens live in [`design-assets/minimodeLL-brand/`](design-assets/minimodeLL-brand/README.md); the app's curated runtime subset is described in [docs/branding.md](docs/branding.md).
+
+<p align="center">
+  <img alt="minimodeLL brand sheet: lockups, mark, app icon, palette, and menu bar states in light and dark" src="design-assets/minimodeLL-brand/brand-sheet.png" width="720">
+</p>
 
 ## Continuing development
 
@@ -91,4 +129,4 @@ See [architecture](docs/architecture.md), [security](SECURITY.md), [roadmap](doc
 
 ## License
 
-MIT. Dependency and model licenses remain separate. No model weights or inference runtime are redistributed in this preview.
+MIT. Dependency and model licenses remain separate. No model weights or inference runtime are redistributed in this preview. Geist and Geist Mono are distributed under the SIL Open Font License; see `design-assets/minimodeLL-brand/fonts/OFL.txt`.

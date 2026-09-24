@@ -1,4 +1,14 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../design-assets/minimodeLL-brand/logo/svg/lockup-horizontal-reversed.svg">
+    <source media="(prefers-color-scheme: light)" srcset="../design-assets/minimodeLL-brand/logo/svg/lockup-horizontal-color.svg">
+    <img alt="minimodeLL" src="../design-assets/minimodeLL-brand/logo/svg/lockup-horizontal-color.svg" width="260">
+  </picture>
+</p>
+
 # Documentation map
+
+**Website:** the landing page and a rendered copy of these documents are published by [`.github/workflows/pages.yml`](../.github/workflows/pages.yml) from [`site/`](../site/README.md). **Source:** [github.com/jsbonsai/minimodeLL](https://github.com/jsbonsai/minimodeLL). **Start building:** the [README](../README.md) and the [development runbook](development.md).
 
 This project keeps implementation context in version control so a human or AI contributor can resume without the original conversation. Read the current checkpoint before changing code.
 
@@ -9,13 +19,13 @@ This project keeps implementation context in version control so a human or AI co
 | [Backlog](backlog.md) | Ordered work with acceptance criteria and dependencies | Work is opened, started, blocked, or completed |
 | [Architecture](architecture.md) | Component/data flow and implementation boundaries | Boundaries or execution flow change |
 | [Decisions](decisions/README.md) | Rationale, alternatives, and consequences | A consequential choice is made or revised |
-| [Website plan](website-plan.md) | Proposed GitHub Pages landing/docs and repository branding; not implemented | Website decisions or implementation progress |
+| [Website plan](website-plan.md) | GitHub Pages landing/docs site and repository branding: plan, implementation status, and deployment record | Website decisions or implementation progress |
 | [Branding](branding.md) | Supplied artwork, runtime mapping and status semantics | Visual identity/resources change |
 | [Code map](code-map.md) | File-level responsibilities and change entry points | Modules or ownership move |
 | [Configuration reference](configuration-reference.md) | Fields, defaults, constraints, and example semantics | Configuration or policy behavior changes |
 | [Development runbook](development.md) | Reproducible commands, fixture usage, known build issues | Build/debug workflow changes |
 | [Jamf test plan](jamf-test-plan.md) | Scoped live sandbox acceptance worksheet | Scope or evidence changes |
-| [Kandji](kandji.md) | Best-effort provider workflow and untested assumptions | Vendor workflow or evidence changes |
+| [Iru (formerly Kandji)](kandji.md) | Best-effort provider workflow and untested assumptions | Vendor workflow or evidence changes |
 | [Deployment](deployment.md) | Standalone and optional Jamf distribution | Packaging/management behavior changes |
 | [Validation plan](validation.md) | Test strategy and fleet qualification gates | Support criteria or validation mechanisms change |
 | [Validation results](validation-results.md) | Evidence actually obtained and its limits | A relevant check is performed |
