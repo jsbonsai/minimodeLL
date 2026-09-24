@@ -7,6 +7,7 @@ struct MinimodeLLApp: App {
     init() {
         if CommandLine.arguments.contains("--runtime-smoke-test") { RuntimeSmokeCommand.runAndExit() }
         if CommandLine.arguments.contains("--model-download") { ModelDownloadCommand.runAndExit() }
+        if CommandLine.arguments.contains("--probe-provider") { ProviderProbeCommand.runAndExit() }
         BrandAssets.registerFonts()
     }
     var body: some Scene {
