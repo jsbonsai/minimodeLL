@@ -169,8 +169,7 @@ struct WorkspaceView: View {
                         ForEach(snapshot.configuration.models) { model in Text(model.title).tag(model.id) }
                     }.disabled(state.busy)
                 }
-                Label(state.provider?.kind == .litellm ? "Cloud inference through your LiteLLM gateway" : "Local inference · tools connect to remote services",
-                      systemImage: state.provider?.kind == .litellm ? "cloud" : "desktopcomputer")
+                Label(state.destinationLabel, systemImage: state.destinationSymbol)
                     .font(.caption).foregroundStyle(.secondary)
                 if state.usesManagedRuntime { RuntimeStatus(runtime: state.runtimeState) }
                 TextEditor(text: $state.input)

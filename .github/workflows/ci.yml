@@ -18,6 +18,7 @@ jobs:
       - run: swift run minimodell-diagnostics --config Config/local.example.json
       - run: swift run minimodell-diagnostics --config Config/enterprise.example.json
       - run: swift run minimodell-diagnostics --config Config/bundled-runtime.example.json
+      - run: swift run minimodell-diagnostics --config Config/lan-lmstudio.example.json
       - name: Package without bundled runtime (external-server mode)
         run: scripts/package-app.sh
       - name: Fetch pinned llama.cpp runtime (SHA-256 verified)
