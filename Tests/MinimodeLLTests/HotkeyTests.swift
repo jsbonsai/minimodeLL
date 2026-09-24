@@ -19,6 +19,15 @@ import Carbon.HIToolbox
     #expect(try Hotkey.parse("⌃⌥⇧⌘Space").displayString == "⌃⌥⇧⌘Space")
 }
 
+@Test func parsesSpacedGlyphModifiers() throws {
+    // The display form pasted back with spaces, or typed one glyph at a time, is accepted.
+    #expect(try Hotkey.parse("⌥ Space") == Hotkey.fallback)
+    #expect(try Hotkey.parse("⇧ ⌥ ⌃ K") == Hotkey(modifiers: [.shift, .option, .control], keyCode: UInt32(kVK_ANSI_K), keyName: "k"))
+    #expect(try Hotkey.parse("⌘ + ⇧ + k") == Hotkey(modifiers: [.command, .shift], keyCode: UInt32(kVK_ANSI_K), keyName: "k"))
+    #expect(try Hotkey.parse(" ⌃  ⌥  space ").displayString == "⌃⌥Space")
+    #expect(throws: Hotkey.ParseError.noKey) { try Hotkey.parse("⇧ ⌥") }
+}
+
 @Test func rejectsBareKeysAndUnknownTokens() {
     #expect(throws: Hotkey.ParseError.noModifier) { try Hotkey.parse("space") }
     #expect(throws: Hotkey.ParseError.noKey) { try Hotkey.parse("cmd+shift") }

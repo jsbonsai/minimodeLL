@@ -18,22 +18,29 @@ struct MinimodeLLApp: App {
         _state = State(initialValue: appState)
         commandBar = CommandBarController(state: appState)
         commandBar.install()
-        // Debug aid for launch verification without a keyboard: `minimodell --open-command-bar`.
+        // Debug aids for launch verification without a keyboard: `minimodell --open-command-bar` shows the bar;
+        // `--open-workspace` takes the ⌘O path (the controller's opener) before any window exists.
         if CommandLine.arguments.contains("--open-command-bar") {
             let commandBar = commandBar
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { commandBar.show() }
+        }
+        if CommandLine.arguments.contains("--open-workspace") {
+            let commandBar = commandBar
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { commandBar.openWorkspace() }
         }
     }
     var body: some Scene {
         MenuBarExtra {
             MenuContent(state: state, commandBar: commandBar)
         } label: {
+            // The label is the one view that always exists, so the opener lives here: ⌘O and "Open workspace
+            // window" work on a fresh launch, before the workspace scene has ever been rendered.
             Image(nsImage: BrandAssets.menuIcon(state.brandState))
                 .accessibilityLabel(Brand.displayName)
+                .background(WorkspaceOpener(commandBar: commandBar))
         }
         WindowGroup(Brand.displayName, id: "workspace") {
             WorkspaceView(state: state).designRoot()
-                .background(WorkspaceOpener(commandBar: commandBar))
         }
         .defaultSize(width: 820, height: 650)
         Settings { SettingsView(state: state, commandBar: commandBar).designRoot().frame(width: 720, height: 560) }
@@ -143,10 +150,7 @@ struct MenuContent: View {
     var body: some View {
         Text(state.busy ? "Task in progress" : "Ready for a small task")
         Button("Command bar    \(commandBar.hotkeyLabel)") { commandBar.show() }
-        Button("Open workspace window") {
-            commandBar.onOpenWorkspace = { openWindow(id: "workspace") }
-            openWindow(id: "workspace"); NSApp.activate(ignoringOtherApps: true)
-        }
+        Button("Open workspace window") { openWindow(id: "workspace"); NSApp.activate(ignoringOtherApps: true) }
         if state.usesManagedRuntime || state.runtimeState != .stopped { Text(state.runtimeState.summary) }
         SettingsLink()
         if state.busy { Button("Stop task") { state.cancel() } }

@@ -91,10 +91,11 @@ struct Hotkey: Equatable, Sendable {
         return parsed
     }
 
+    /// Includes the ⌘⇧⌥⌃ glyphs as stand-alone tokens so a spaced form ("⌥ ⇧ Space") parses like "⌥⇧Space".
     private static let modifierNames: [String: Modifiers] = [
         "cmd": .command, "command": .command, "⌘": .command,
-        "shift": .shift, "opt": .option, "option": .option, "alt": .option,
-        "ctrl": .control, "control": .control
+        "shift": .shift, "⇧": .shift, "opt": .option, "option": .option, "alt": .option, "⌥": .option,
+        "ctrl": .control, "control": .control, "⌃": .control
     ]
     private static let displayNames: [String: String] = [
         "space": "Space", "return": "↩", "enter": "↩", "tab": "⇥", "escape": "⎋", "delete": "⌫",

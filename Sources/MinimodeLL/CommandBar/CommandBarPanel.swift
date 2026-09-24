@@ -17,7 +17,8 @@ final class CommandBarPanel: NSPanel {
         backgroundColor = .clear
         hasShadow = true
         hidesOnDeactivate = false
-        isMovableByWindowBackground = true
+        // Launchers stay put; dragging the card would also fight the top-anchored resize (`anchorTop`).
+        isMovableByWindowBackground = false
         isReleasedWhenClosed = false
         animationBehavior = .none
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]

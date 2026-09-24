@@ -17,21 +17,44 @@ enum CommandBarPhase: Equatable, Sendable {
     case error
 }
 
-/// Where the model call goes. Local providers are loopback-only by policy, so there is no LAN variant.
+/// Where the model call goes, for the chip. Derived from the core's `InferenceDestination` (ADR 0011), which is
+/// the same classification the workspace window and diagnostics use; the bar adds only short labels.
 enum Destination: Equatable, Sendable {
     case local
+    case lan(host: String, encrypted: Bool)
     case cloud(host: String)
     case none
+
+    init(_ destination: InferenceDestination?, host: String) {
+        switch destination {
+        case .thisMac?: self = .local
+        case .lan(let host, let encrypted)?: self = .lan(host: host, encrypted: encrypted)
+        case .cloud?: self = .cloud(host: host)
+        case nil: self = .none
+        }
+    }
+    /// Short chip text. LAN destinations disclose the transport; the full disclosure is in `spoken`.
     var label: String {
         switch self {
         case .local: "On this Mac"
+        case .lan(let host, true): "LAN · TLS · \(host)"
+        case .lan(let host, false): "LAN · unencrypted · \(host)"
         case .cloud(let host): host.isEmpty ? "Cloud" : "Cloud · \(host)"
         case .none: "No model"
+        }
+    }
+    /// VoiceOver text. For LAN it is the core's own disclosure line (request and tool results go to that host).
+    var spoken: String {
+        switch self {
+        case .lan(let host, let encrypted): InferenceDestination.lan(host: host, encrypted: encrypted).label
+        default: label
         }
     }
     var symbol: String {
         switch self {
         case .local: "desktopcomputer"
+        case .lan(_, true): "network"
+        case .lan(_, false): "network.badge.shield.half.filled"
         case .cloud: "cloud"
         case .none: "questionmark.circle"
         }
@@ -50,6 +73,9 @@ struct CommandBarInputs: Equatable, Sendable {
     var runtimeState: RuntimeState = .stopped
     var usesManagedRuntime = false
     var providerKind: ProviderSpec.Kind?
+    /// The core's classification of the selected provider (`ProviderSpec.destination`); nil when no model is selected.
+    var destination: InferenceDestination?
+    /// Host shown for cloud gateways (the core's `.cloud` case carries no host).
     var providerHost = ""
     var modelTitle = ""
     var inputLimit = 0
@@ -93,18 +119,18 @@ struct CommandBarModel: Equatable, Sendable {
         else if !trimmed.isEmpty { phase = .typing }
         else { phase = .idle }
 
-        let destination: Destination
-        switch inputs.providerKind {
-        case .local?, .managed?: destination = .local
-        case .litellm?: destination = .cloud(host: inputs.providerHost)
-        case nil: destination = .none
-        }
+        let destination = Destination(inputs.destination, host: inputs.providerHost)
 
         let status: String
         switch phase {
         case .locked: status = inputs.managed ? "Managed policy could not be applied. Requests are blocked." : "Configuration could not be loaded."
         case .modelStarting: status = "Starting local model…"
-        case .running: status = inputs.usesManagedRuntime ? "Working on this Mac…" : (destination == .local ? "Working with the local model…" : "Working through your gateway…")
+        case .running:
+            switch destination {
+            case .local: status = inputs.usesManagedRuntime ? "Working on this Mac…" : "Working with the local model…"
+            case .lan: status = "Working with the model on your network…"
+            case .cloud, .none: status = "Working through your gateway…"
+            }
         case .approval: status = "Waiting for your decision"
         case .result: status = "Done"
         case .error: status = "Could not complete"

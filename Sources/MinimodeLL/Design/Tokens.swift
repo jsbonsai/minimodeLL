@@ -24,23 +24,34 @@ struct DesignPalette: Equatable, Sendable {
     let accent: Color
     /// Accent wash for selection rows (accent at 12%).
     let accentWash: Color
-    /// Status colors (`color.status.*`). Dark variants are lightened so they keep ≥ 4.5:1 on ink.
+    /// Text on the accent fill (prominent button). White in light mode; ink in dark mode, where white on the
+    /// lighter dark accent would only reach 2.7:1.
+    let onAccent: Color
+    /// Status colors (`color.status.*`) for dots and other non-text marks. Dark variants are lightened.
     let running: Color
     let warning: Color
     let blocked: Color
+    /// Text-safe status colors for labels and icons: every one is ≥ 4.5:1 on `surface`, `inset` and on its
+    /// own 12 % wash (see the contrast table in `docs/design/raycast-redesign.md`). The dot colors above are
+    /// not all text-safe (light `warning` is 3.6:1 on white), so text never uses them.
+    let runningInk: Color
+    let warningInk: Color
+    let blockedInk: Color
     let isDark: Bool
 
     static let light = DesignPalette(
         background: Color(hex: 0xF2F3EF), surface: Color(hex: 0xFFFFFF), inset: Color(hex: 0xF2F3EF),
         text: Color(hex: 0x16181D), muted: Color(hex: 0x5B5F68), border: Color(hex: 0xE2E4DF),
-        accent: Color(hex: 0x3A5BD9), accentWash: Color(hex: 0x3A5BD9, alpha: 0.12),
-        running: Color(hex: 0x1F8A5B), warning: Color(hex: 0xB7791F), blocked: Color(hex: 0xC23B3B), isDark: false)
+        accent: Color(hex: 0x3A5BD9), accentWash: Color(hex: 0x3A5BD9, alpha: 0.12), onAccent: Color(hex: 0xFFFFFF),
+        running: Color(hex: 0x1F8A5B), warning: Color(hex: 0xB7791F), blocked: Color(hex: 0xC23B3B),
+        runningInk: Color(hex: 0x176B47), warningInk: Color(hex: 0x8A5A12), blockedInk: Color(hex: 0xC23B3B), isDark: false)
 
     static let dark = DesignPalette(
         background: Color(hex: 0x16181D), surface: Color(hex: 0x22252C), inset: Color(hex: 0x2B2E36),
         text: Color(hex: 0xF2F3EF), muted: Color(hex: 0xA3A7AF), border: Color(hex: 0x33363E),
-        accent: Color(hex: 0x7D96FF), accentWash: Color(hex: 0x7D96FF, alpha: 0.16),
-        running: Color(hex: 0x3DBD85), warning: Color(hex: 0xD9A441), blocked: Color(hex: 0xE0605F), isDark: true)
+        accent: Color(hex: 0x7D96FF), accentWash: Color(hex: 0x7D96FF, alpha: 0.16), onAccent: Color(hex: 0x16181D),
+        running: Color(hex: 0x3DBD85), warning: Color(hex: 0xD9A441), blocked: Color(hex: 0xE0605F),
+        runningInk: Color(hex: 0x3DBD85), warningInk: Color(hex: 0xD9A441), blockedInk: Color(hex: 0xEE8483), isDark: true)
 
     static func forScheme(_ scheme: ColorScheme) -> DesignPalette { scheme == .dark ? .dark : .light }
 }

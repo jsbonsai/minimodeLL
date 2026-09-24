@@ -21,8 +21,33 @@ enum CommandBarLayout {
     var suggestionSelection = 0
     var focusToken = 0
     var copied = false
+    /// False for a short arming window after an approval card appears, so a ⌘↩ or click that was meant for
+    /// another app cannot approve a tool action that had not been seen yet (`CommandBarController.armApproval`).
+    var approvalArmed = false
+    /// The shortcut currently registered with the system, or nil when registration failed. Observable so
+    /// Settings → Command Bar shows the live status after Apply.
+    var registeredHotkey: Hotkey?
     /// Reported card height (unanimated target after each layout pass); the panel follows it.
     var onHeightChange: (CGFloat) -> Void = { _ in }
+}
+
+/// Spoken names for key caps, so VoiceOver reads "Command Return" rather than a string of symbols.
+enum Keycap {
+    static func spoken(_ keys: String) -> String {
+        let names: [Character: String] = ["⌘": "Command", "⇧": "Shift", "⌥": "Option", "⌃": "Control",
+                                          "↩": "Return", "⌫": "Delete", "↑": "Up arrow", "↓": "Down arrow", "⎋": "Escape"]
+        if keys.lowercased() == "esc" { return "Escape" }
+        var parts: [String] = []
+        var plain = ""
+        for character in keys {
+            if let name = names[character] {
+                if !plain.isEmpty { parts.append(plain); plain = "" }
+                parts.append(name)
+            } else { plain.append(character) }
+        }
+        if !plain.isEmpty { parts.append(plain == "," ? "Comma" : plain == "." ? "Period" : plain.uppercased()) }
+        return parts.joined(separator: " ")
+    }
 }
 
 struct ModelChoice: Identifiable, Equatable {
@@ -123,7 +148,7 @@ struct CommandBarView: View {
             ProgressSection(status: model.statusLine).transition(transition)
         case .approval:
             if let proposal = model.proposal {
-                ApprovalCard(proposal: proposal, approve: actions.approve, deny: actions.deny).transition(transition)
+                ApprovalCard(proposal: proposal, armed: session.approvalArmed, approve: actions.approve, deny: actions.deny).transition(transition)
             }
         case .result:
             ResultSection(text: model.result).transition(transition)
@@ -187,7 +212,7 @@ struct CommandBarView: View {
             case .typing:
                 if model.inputLimit > 0, model.inputBytes > model.inputLimit * 3 / 4 {
                     Text("\(model.inputBytes) / \(model.inputLimit) bytes").monospacedDigit()
-                        .foregroundStyle(model.inputBytes > model.inputLimit ? palette.blocked : palette.muted)
+                        .foregroundStyle(model.inputBytes > model.inputLimit ? palette.blockedInk : palette.muted)
                 }
                 KeyHint("Run", "↩")
             case .running, .modelStarting: KeyHint("Hide", "esc")
@@ -286,7 +311,15 @@ struct DestinationChip: View {
         .insetSurface(radius: Radius.md)
         .fixedSize()
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Model \(model.modelTitle), \(model.destination.label)\(model.managed ? ", managed by your organization" : "")")
+        .accessibilityLabel(spokenLabel)
+    }
+    /// "Model Qwen3 4B, On this Mac, managed by your organization"; without a selected model, just the destination.
+    private var spokenLabel: String {
+        var parts: [String] = []
+        if !model.modelTitle.isEmpty { parts.append("Model \(model.modelTitle)") }
+        parts.append(model.destination.spoken)
+        if model.managed { parts.append("managed by your organization") }
+        return parts.joined(separator: ", ")
     }
 }
 
@@ -303,7 +336,7 @@ struct KeyHint: View {
                 .padding(.horizontal, 5).frame(height: 17).insetSurface(radius: 4)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(label), \(keys)")
+        .accessibilityLabel("\(label), \(Keycap.spoken(keys))")
     }
 }
 
@@ -324,9 +357,10 @@ struct SuggestionList: View {
                         Image(systemName: suggestion.symbol).font(.system(size: 13, weight: .medium))
                             .frame(width: 22, height: 22).foregroundStyle(index == selection ? palette.accent : palette.muted)
                             .insetSurface(radius: Radius.sm)
+                            .accessibilityHidden(true)
                         Text(suggestion.title).font(Typography.label).foregroundStyle(palette.text)
                         Spacer()
-                        if index == selection { Text("↩").font(Typography.keycap).foregroundStyle(palette.muted) }
+                        if index == selection { Text("↩").font(Typography.keycap).foregroundStyle(palette.muted).accessibilityHidden(true) }
                     }
                     .padding(.horizontal, Space.md).frame(height: 36)
                     .background(index == selection ? palette.accentWash : .clear, in: RoundedRectangle(cornerRadius: Radius.md, style: .continuous))
@@ -376,27 +410,33 @@ struct ProgressSection: View {
     }
 }
 
-/// Inline approval. Presentation only: both buttons call `AppState.decide`, which the core awaits.
+/// Inline approval. Presentation only: both buttons call `AppState.decide`, which the core awaits. While
+/// `armed` is false (the first ~0.6 s after the card appears) both buttons are disabled, matching the key map.
 struct ApprovalCard: View {
     let proposal: ProposalSummary
+    var armed = true
     let approve: () -> Void
     let deny: () -> Void
     @Environment(\.palette) private var palette
     var body: some View {
         VStack(alignment: .leading, spacing: Space.md) {
             HStack(spacing: Space.sm) {
-                Image(systemName: "checkmark.shield").font(.system(size: 14, weight: .semibold)).foregroundStyle(palette.warning)
-                Text("Review tool action").font(Typography.title)
+                Image(systemName: "checkmark.shield").font(.system(size: 14, weight: .semibold)).foregroundStyle(palette.warningInk)
+                    .accessibilityHidden(true)
+                Text("Review tool action").font(Typography.title).accessibilityAddTraits(.isHeader)
                 Spacer()
-                Text("Approval required").font(Typography.captionStrong).foregroundStyle(palette.warning)
+                Text("Approval required").font(Typography.captionStrong).foregroundStyle(palette.warningInk)
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(palette.warning.opacity(0.12), in: Capsule())
             }
             HStack(spacing: Space.sm) {
                 Text(proposal.server).font(Typography.labelStrong)
                 Image(systemName: "arrow.right").font(.system(size: 10, weight: .bold)).foregroundStyle(palette.muted)
+                    .accessibilityHidden(true)
                 Text(proposal.tool).font(Typography.labelStrong).foregroundStyle(palette.accent)
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Server \(proposal.server), tool \(proposal.tool)")
             BoundedScroll(maxHeight: CommandBarLayout.argumentsMaxHeight) {
                 Text(proposal.arguments).font(Typography.mono).textSelection(.enabled)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(Space.md)
@@ -407,11 +447,14 @@ struct ApprovalCard: View {
                 .font(Typography.caption).foregroundStyle(palette.muted)
             HStack(spacing: Space.sm) {
                 Spacer()
-                Button(action: deny) { HStack(spacing: 6) { Text("Deny"); Text("⌘⌫").font(Typography.keycap).opacity(0.7) } }
+                Button(action: deny) { HStack(spacing: 6) { Text("Deny"); Text("⌘⌫").font(Typography.keycap).opacity(0.7).accessibilityHidden(true) } }
                     .buttonStyle(BarButtonStyle(prominent: false))
-                Button(action: approve) { HStack(spacing: 6) { Text("Approve once"); Text("⌘↩").font(Typography.keycap).opacity(0.8) } }
+                    .accessibilityLabel("Deny").accessibilityHint("Command Delete")
+                Button(action: approve) { HStack(spacing: 6) { Text("Approve once"); Text("⌘↩").font(Typography.keycap).opacity(0.8).accessibilityHidden(true) } }
                     .buttonStyle(BarButtonStyle(prominent: true))
+                    .accessibilityLabel("Approve once").accessibilityHint("Command Return")
             }
+            .disabled(!armed)
         }
         .padding(.horizontal, CommandBarLayout.horizontalInset).padding(.vertical, Space.lg)
         .overlay(alignment: .top) { Rectangle().fill(palette.border).frame(height: 1) }
@@ -441,8 +484,9 @@ struct NoticeSection: View {
     var body: some View {
         HStack(alignment: .top, spacing: Space.md) {
             Image(systemName: kind == .error ? "exclamationmark.circle" : "lock.shield")
-                .font(.system(size: 15, weight: .semibold)).foregroundStyle(palette.blocked)
+                .font(.system(size: 15, weight: .semibold)).foregroundStyle(palette.blockedInk)
                 .frame(width: 28, height: 28).insetSurface(radius: Radius.sm)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).font(Typography.title)
                 if !message.isEmpty { Text(message).font(Typography.label).foregroundStyle(palette.muted).textSelection(.enabled) }
@@ -473,12 +517,14 @@ struct ActionPanel: View {
                 Button { perform(action) } label: {
                     HStack(spacing: Space.sm) {
                         Image(systemName: action.symbol).font(.system(size: 12, weight: .medium)).frame(width: 18)
-                            .foregroundStyle(action.destructive ? palette.blocked : (index == selection ? palette.accent : palette.muted))
-                        Text(action.title).font(Typography.label).foregroundStyle(action.destructive ? palette.blocked : palette.text)
+                            .foregroundStyle(action.destructive ? palette.blockedInk : (index == selection ? palette.accent : palette.muted))
+                            .accessibilityHidden(true)
+                        Text(action.title).font(Typography.label).foregroundStyle(action.destructive ? palette.blockedInk : palette.text)
                         Spacer()
                         if let shortcut = action.shortcut {
                             Text(shortcut).font(Typography.keycap).foregroundStyle(palette.muted)
                                 .padding(.horizontal, 5).frame(height: 17).insetSurface(radius: 4)
+                                .accessibilityHidden(true)
                         }
                     }
                     .padding(.horizontal, Space.sm).frame(height: Self.rowHeight)
@@ -486,6 +532,8 @@ struct ActionPanel: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(action.title)
+                .accessibilityHint(action.shortcut.map(Keycap.spoken) ?? "")
                 .accessibilityAddTraits(index == selection ? .isSelected : [])
             }
         }
@@ -505,7 +553,7 @@ struct BarButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(Typography.labelStrong)
-            .foregroundStyle(prominent ? Color.white : palette.text)
+            .foregroundStyle(prominent ? palette.onAccent : palette.text)
             .padding(.horizontal, 12).frame(height: 28)
             .background(prominent ? palette.accent : palette.inset, in: RoundedRectangle(cornerRadius: Radius.sm, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: Radius.sm, style: .continuous).strokeBorder(prominent ? .clear : palette.border, lineWidth: 1))

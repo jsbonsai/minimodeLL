@@ -16,7 +16,7 @@ enum DesignPreviewCommand {
 
     static var fixtures: [Fixture] {
         var base = CommandBarInputs()
-        base.providerKind = .managed; base.usesManagedRuntime = true; base.modelTitle = "Qwen3 4B"
+        base.providerKind = .managed; base.destination = .thisMac; base.usesManagedRuntime = true; base.modelTitle = "Qwen3 4B"
         base.inputLimit = 8_000; base.serverCount = 2; base.runtimeState = .ready
         var idle = base; idle.runtimeState = .stopped
         var typing = base; typing.input = "Summarize this: the quarterly planning notes from the team meeting"
@@ -28,9 +28,12 @@ enum DesignPreviewCommand {
         var result = base
         result.result = "Three points from the planning notes:\n\n1. The rollout moves to the second week of October so the support team can finish onboarding.\n2. Two open risks remain: the vendor contract renewal and the unassigned QA capacity for the mobile client.\n3. Owners were confirmed for each item; the next checkpoint is Friday's stand-up."
         var error = base; error.error = "The task could not complete. Check the provider, connection, and sign-in settings."
-        var cloud = base; cloud.providerKind = .litellm; cloud.usesManagedRuntime = false; cloud.providerHost = "litellm.example.com"
-        cloud.modelTitle = "Gateway model"; cloud.runtimeState = .stopped
+        var cloud = base; cloud.providerKind = .litellm; cloud.destination = .cloud; cloud.usesManagedRuntime = false
+        cloud.providerHost = "litellm.example.com"; cloud.modelTitle = "Gateway model"; cloud.runtimeState = .stopped
         cloud.input = "Draft a short reply to: the vendor's renewal email"
+        var lan = base; lan.providerKind = .lan; lan.destination = .lan(host: "192.168.1.50", encrypted: false)
+        lan.usesManagedRuntime = false; lan.providerHost = "192.168.1.50"; lan.modelTitle = "LM Studio"; lan.runtimeState = .stopped
+        lan.input = "Explain in plain terms: the renewal clause"
         var locked = CommandBarInputs(); locked.configurationAvailable = false; locked.managed = true
         return [
             Fixture(name: "idle", inputs: idle, showActions: false, input: ""),
@@ -42,6 +45,7 @@ enum DesignPreviewCommand {
             Fixture(name: "result-actions", inputs: result, showActions: true, input: ""),
             Fixture(name: "error", inputs: error, showActions: false, input: ""),
             Fixture(name: "cloud-typing", inputs: cloud, showActions: false, input: cloud.input),
+            Fixture(name: "lan-typing", inputs: lan, showActions: false, input: lan.input),
             Fixture(name: "locked", inputs: locked, showActions: false, input: "")
         ]
     }
@@ -56,6 +60,7 @@ enum DesignPreviewCommand {
                 for (schemeName, palette) in [("light", DesignPalette.light), ("dark", DesignPalette.dark)] {
                     let session = CommandBarSession()
                     session.showActions = fixture.showActions
+                    session.approvalArmed = true // the previews show the settled card, after the arming window
                     let model = CommandBarModel.resolve(fixture.inputs)
                     let models = [ModelChoice(id: "a", title: model.modelTitle.isEmpty ? "Model" : model.modelTitle), ModelChoice(id: "b", title: "Qwen3 8B")]
                     let view = CommandBarView(model: model, input: .constant(fixture.input), session: session, models: models,
