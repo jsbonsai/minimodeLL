@@ -43,6 +43,10 @@ public enum MCPHeaderPolicy {
     /// RFC 9110 field value restricted to visible ASCII plus inner spaces/tabs: no CR, LF, NUL or other controls,
     /// no leading/trailing whitespace, no non-ASCII bytes. Prevents header injection through a value.
     public static func validateValue(_ value: String, headerName: String) throws {
+        // macOS smart dashes/quotes turn a typed "--" or quote into a typographic character; say so explicitly.
+        if value.unicodeScalars.contains(where: { "\u{2012}\u{2013}\u{2014}\u{2015}\u{2018}\u{2019}\u{201C}\u{201D}".unicodeScalars.contains($0) }) {
+            throw AgentError.rejected("The value for header \(headerName) contains a typographic dash or quote (for example — instead of --). macOS may have replaced what you typed; paste the original value or turn off smart dashes and quotes.")
+        }
         let bytes = Array(value.utf8)
         guard !bytes.isEmpty, bytes.count <= maxValueBytes,
               bytes.allSatisfy({ ($0 >= 0x21 && $0 <= 0x7E) || $0 == 0x20 || $0 == 0x09 }),

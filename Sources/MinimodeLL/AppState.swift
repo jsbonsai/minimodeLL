@@ -28,6 +28,11 @@ final class AppState {
     /// App-owned bundled llama-server for `managed` providers (ADR 0008).
     let runtime: RuntimeManager
     init() {
+        // Keys, headers, URLs and JSON are typed in this app; typographic substitution would corrupt them
+        // (for example "--" becoming an em dash). Set in the app domain so it overrides the global preference.
+        for key in ["NSAutomaticDashSubstitutionEnabled", "NSAutomaticQuoteSubstitutionEnabled", "NSAutomaticTextReplacementEnabled"] {
+            UserDefaults.standard.set(false, forKey: key)
+        }
         let store = ModelStore()
         modelStore = store
         runtime = RuntimeManager(modelStore: store)
