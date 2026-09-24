@@ -1,8 +1,8 @@
 # Command bar design spec (WORK-009, issue #10)
 
-Status: implemented on `feat/raycast-design` as a developer preview. Rendered previews live in
-[`previews/`](previews/) (offline `ImageRenderer` output; see "Verification"). Code: `Sources/MinimodeLL/Design/`
-and `Sources/MinimodeLL/CommandBar/`.
+Status: implemented on `feat/raycast-design` as a developer preview; review findings on PR #28 fixed (see
+"Review fixes" in the session record). Rendered previews live in [`previews/`](previews/) (offline
+`ImageRenderer` output; see "Verification"). Code: `Sources/MinimodeLL/Design/` and `Sources/MinimodeLL/CommandBar/`.
 
 The command bar is the primary way to use minimodeLL: a floating, translucent, keyboard-first panel summoned
 with a global shortcut, in the spirit of macOS launchers such as Raycast and Spotlight. The workspace window and
@@ -51,7 +51,7 @@ the menu bar item remain. Nothing in the bar changes what the core allows; every
 | --- | --- | --- |
 | Mark | `CommandBarModel.markState` | Ring dot idle, solid dot while the core works or waits for approval, no dot when locked |
 | Input | `AppState.input` | `TextField(axis: .vertical)`, Geist 19, 1–4 lines, ↩ runs, ⌥↩ inserts a newline |
-| Destination chip | `AppState.provider`, `model` | "Qwen3 4B · On this Mac", "Gateway model · Cloud · host", lock glyph when managed. Local providers are loopback-only by policy, so there is no LAN variant |
+| Destination chip | `AppState.destination` (the core's `ProviderSpec.destination`, ADR 0011) | "Qwen3 4B · On this Mac", "Gateway model · Cloud · host", "LM Studio · LAN · TLS · host" or "LAN · unencrypted · host" for `lan` providers, lock glyph when managed. The bar never re-derives the destination from the URL; VoiceOver reads the core's full LAN disclosure line |
 | Status line | `CommandBarModel.statusLine` | Content-free; mirrors `RuntimeState` for the bundled runtime |
 | Key hints | phase | Always shows the primary key and ⌘K |
 
@@ -73,6 +73,17 @@ Precedence is fixed in code and tested: locked › approval › running/modelSta
 Approval details: the card is presentation only. Both buttons call `AppState.decide`, which resolves the same
 `TaskRunner` approval continuation the workspace sheet uses. Esc hides the panel but leaves the proposal
 pending; an approval that arrives while the bar is hidden brings it back (`watchApprovals`). Plain ↩ never approves.
+
+Two guards keep a keystroke meant for another app from approving a tool action:
+
+- **Surfacing does not take the keyboard.** An approval shows the panel with `orderFrontRegardless` (visible,
+  not key) and installs no key monitor. The user gives it the keyboard with the hotkey or a click; only then
+  does the keyboard map apply. A ⌘↩ typed into Slack at that moment goes to Slack.
+- **Arming window.** For 0.6 s after a proposal appears (`CommandBarController.armApproval`,
+  `CommandBarSession.approvalArmed`) ⌘↩, ⌘⌫, the Deny/Approve buttons and the ⌘K rows are inert; key
+  repeats (`isARepeat`) never decide at any time. All decisions go through one `decide` method that disarms
+  immediately. `approvalKeysAreInertDuringTheArmingWindow` and `keyRepeatsNeverDecideAnApproval` cover this.
+  VoiceOver receives an announcement (server and tool IDs only) when the card appears.
 
 ## Motion
 
@@ -133,10 +144,25 @@ the offline renderer is deterministic.
 | border | `#E2E4DF` mist | `#33363E` | `--mm-border` |
 | accent | `#3A5BD9` signal | `#7D96FF` signalDark | `--mm-accent` |
 | accentWash | accent 12 % | accent 16 % | derived (selection rows) |
-| running / warning / blocked | `#1F8A5B` / `#B7791F` / `#C23B3B` | `#3DBD85` / `#D9A441` / `#E0605F` | `status.*`; dark values lightened for ≥ 4.5:1 on ink |
+| onAccent | `#FFFFFF` | `#16181D` ink | derived: text on the accent fill (white on the dark accent is only 2.7:1) |
+| running / warning / blocked | `#1F8A5B` / `#B7791F` / `#C23B3B` | `#3DBD85` / `#D9A441` / `#E0605F` | `status.*`, **dots and marks only** |
+| runningInk / warningInk / blockedInk | `#176B47` / `#8A5A12` / `#C23B3B` | `#3DBD85` / `#D9A441` / `#EE8483` | derived text-safe variants for status labels and icons (≥ 4.5:1 on surface, inset and their own 12 % wash) |
 
 Signal is used only for the dot, the selected/prominent control and the tool name, never as a large fill
 (brand rule). Spacing follows `space.*` (4/8/12/16/24/32); radii `sm` 6, `md` 10, `lg` 16, `panel` 18.
+
+### Contrast (WCAG 2.x relative luminance, computed from the hex values above)
+
+| Pair | Light | Dark | Used for |
+| --- | --- | --- | --- |
+| text on surface / inset | 17.8 / 15.9 | 13.8 / 12.2 | body, titles, key caps |
+| muted on surface / inset | 6.4 / 5.7 | 6.4 / 5.6 | captions, footer, chip |
+| accent on surface / inset | 5.7 / 5.1 | 5.6 / 5.0 | tool name, selected icons |
+| onAccent on accent | 5.7 (white) | 6.5 (ink) | prominent button text and its key cap |
+| warningInk on surface / inset / warning wash | 5.9 / 5.3 / 5.2 | 6.8 / 6.0 / 5.5 | "Approval required" pill, shield icon |
+| blockedInk on surface / inset | 5.3 / 4.7 | 6.0 / 5.3 | error/locked icon, destructive rows, over-budget count, "Not registered" |
+| runningInk on surface / inset | 6.5 / 5.8 | 6.4 / 5.7 | reserved for status text (dots use `running`) |
+| dot colors as text (not used) | warning 3.6, running 4.3 | blocked 4.4 | why the ink variants exist |
 
 ## Keyboard map
 
@@ -148,10 +174,10 @@ Signal is used only for the dot, the selected/prominent control and the tool nam
 | ⌥↩ | typing | newline |
 | ↑ ↓ | idle, ⌘K panel | move selection (arrows pass to the text field otherwise) |
 | ⌘K | any | open / close the action panel |
-| ⌘↩ | approval | Approve once (`AppState.decide(true)`) |
-| ⌘⌫ | approval | Deny (`AppState.decide(false)`) |
+| ⌘↩ | approval, armed | Approve once (`AppState.decide(true)`); inert for 0.6 s after the card appears and on key repeat |
+| ⌘⌫ | approval, armed | Deny (`AppState.decide(false)`); same guards |
 | ⌘. | running | Stop task (`AppState.cancel`) |
-| ⌘C | result, input empty | Copy result (otherwise the text field's copy) |
+| ⌘C | result, no text selected | Copy result (a non-empty selection in the first-responder text view keeps the standard copy) |
 | ⌘N | result / error | New task (clears result and error) |
 | ⌘O | any | Open workspace window |
 | ⌘, | any | Settings |
@@ -159,21 +185,31 @@ Signal is used only for the dot, the selected/prominent control and the tool nam
 | click outside | any | hide (the panel resigns key) |
 
 Handled by a local `NSEvent` monitor scoped to the panel (`CommandBarController.handle`), covered by
-`CommandBarKeyTests`.
+`CommandBarKeyTests`. Special keys (esc, ↩, arrows, ⌫) are matched by key code; letter and punctuation
+shortcuts by `charactersIgnoringModifiers`, so ⌘K is ⌘K on every keyboard layout. The panel is not movable by
+its background (launcher behaviour). The hotkey text form accepts names (`option+space`) and the ⌘ ⇧ ⌥ ⌃
+glyphs, joined or spaced (`⌥ Space`). Settings → Command Bar applies a new shortcut synchronously
+(`CommandBarController.apply`) and shows the registration status from the observable session.
 
 ## Accessibility
 
 - Every interactive element has a label: the input is "Task request", the chip reads "Model X, On this Mac,
-  managed by your organization", key hints read "Run, ↩", the argument block is "Tool arguments", the result is
-  "Result". Section headers carry `.isHeader`; selected rows carry `.isSelected`.
-- Focus order: input first (focused on every show), then suggestion/approval controls, then the footer hints
-  (which are not focusable). The ⌘K panel is a contained element named "Actions".
-- The mark and progress bar are hidden from VoiceOver; state is conveyed by the status line instead.
-- Contrast: text on surface 15.9:1 (light) / 13.9:1 (dark); muted on surface 5.7:1 / 7.1:1; accent on surface
-  5.1:1 / 6.5:1; status colors ≥ 4.5:1 in both schemes. White on accent (prominent button) 5.2:1 light,
-  and the dark accent uses ink text where it would not pass.
+  managed by your organization" (just the destination when no model is selected; the core's full disclosure
+  line for LAN), key hints read "Run, Return", the argument block is "Tool arguments", the result is "Result".
+  The approval buttons are "Deny" (hint "Command Delete") and "Approve once" (hint "Command Return"); ⌘K rows
+  carry their shortcut as a spoken hint. Key caps are spoken by name (`Keycap.spoken`: "Command K",
+  "Up arrow Down arrow", "Escape"). Section headers carry `.isHeader`; selected rows carry `.isSelected`.
+- Decorative icons (chip glyph, shield, arrow, suggestion and action icons) and the key caps inside buttons and
+  rows are hidden from VoiceOver. The mark and progress bar are hidden too; state is conveyed by the status line.
+- An approval posts an `announcementRequested` notification (server and tool IDs only) so a VoiceOver user
+  hears that a decision is needed even while the bar is not focused.
+- Focus order: input first (focused on every user-initiated show), then suggestion/approval controls, then the
+  footer hints (which are not focusable). The ⌘K panel is a contained element named "Actions".
+- Contrast: see the table under "Color tokens". Text never uses the dot colors; the prominent button uses
+  `onAccent` (ink in dark mode).
 - Reduce Motion and Reduce Transparency: see Motion and Materials. Increase Contrast is not specially handled
   (system fonts and hairlines already darken); noted as future work.
+- Not yet verified with VoiceOver running (needs a human or Accessibility permission for an automation tool).
 
 ## Verification
 
@@ -184,7 +220,9 @@ materials render as the opaque `surface` fallback (ImageRenderer cannot draw `NS
 text field is drawn as static text with a caret. Scroll views become plain stacks. The desktop behind the card is
 a flat placeholder.
 
-`minimodell --open-command-bar` shows the bar 0.6 s after launch for launch checks without a keyboard.
+`minimodell --open-command-bar` shows the bar 0.6 s after launch for launch checks without a keyboard;
+`minimodell --open-workspace` takes the ⌘O path (the controller's `onOpenWorkspace`, attached to the menu bar
+label) 0.6 s after launch, which proves the opener works before any window has been shown.
 
 ## Not in this slice
 

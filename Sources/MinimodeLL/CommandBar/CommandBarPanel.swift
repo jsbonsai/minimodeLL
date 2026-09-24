@@ -5,8 +5,9 @@ import SwiftUI
 /// SwiftUI card draws its own material, corners and hairline, and AppKit computes the shadow from the card's alpha.
 ///
 /// Non-activating means summoning the bar does not switch the frontmost app (like Spotlight), yet the panel
-/// becomes key so typing goes straight to the input. It hides when it loses key status, and never appears in
-/// the window list or Mission Control (`.transient`).
+/// can become key so typing goes straight to the input. It is made key only for a user-initiated show or a
+/// click; an approval surfaces it without key status (`CommandBarController.ShowReason`). It hides when it
+/// loses key status, and never appears in the window list or Mission Control (`.transient`).
 final class CommandBarPanel: NSPanel {
     init(contentView: NSView) {
         super.init(contentRect: NSRect(x: 0, y: 0, width: CommandBarLayout.width, height: CommandBarLayout.headerHeight),

@@ -73,6 +73,24 @@ Not changed: `LocalAgentCore` (no file touched), `AppState.swift` (only an exten
 - Optional: light restyle of `ModelsSettings` rows with the tokens (only the scene-level font/tint/palette was applied to avoid conflicts with the MCP Servers tab stream).
 - README/site could use `docs/design/previews/command-bar-idle-dark.png` and `command-bar-approval-light.png`.
 
+## Review fixes (PR #28, same day)
+
+`main` was merged twice first (LAN providers #24, then MCP server settings #27); the Settings `TabView` keeps both the MCP Servers and the Command Bar tabs. The LAN merge made the bar's `providerKind` switch non-exhaustive, which is finding 13 below.
+
+Majors:
+
+1. **Approval surfacing stole keystrokes.** `watchApprovals` now shows the panel with `show(reason: .approval)`: `orderFrontRegardless`, no key monitor, no focus request. The hotkey or a click (`windowDidBecomeKey`) gives it the keyboard. Separately, a 0.6 s arming window after a proposal appears (`armApproval`, `session.approvalArmed`) makes ⌘↩, ⌘⌫, both buttons and the ⌘K rows inert; `isARepeat` events never decide; one `decide` path disarms at once. Tests: `approvalKeysAreInertDuringTheArmingWindow`, `keyRepeatsNeverDecideAnApproval`.
+2. **Prominent button text** uses `palette.onAccent` (white light, ink dark: 6.5:1 instead of 2.7:1), including the key cap inside the button.
+3. **Status text** uses new text-safe tokens `runningInk`/`warningInk`/`blockedInk`; dots keep `running`/`warning`/`blocked`. Recomputing the spec's contrast table showed the previous claims were wrong in several places (light warning 3.6:1, light running 4.3:1, dark blocked 4.4:1 as text); the table now lists computed values per pair.
+4. **⌘O on a fresh launch** did nothing because `onOpenWorkspace` was set from inside the workspace window. `WorkspaceOpener` is now a background of the always-rendered `MenuBarExtra` label; `--open-workspace` proves it (820 × 650 window on first launch).
+5. **Settings hotkey status** was stale after Apply. `CommandBarController.apply(_:) -> Bool` writes the preference and registers synchronously; `registeredHotkey` lives on the `@Observable` session and the tab reads it from there.
+
+Minors: 6 letters/punctuation matched by `charactersIgnoringModifiers` (key codes only for esc/↩/arrows/⌫); 7 ⌘C defers to a non-empty selection in the first-responder `NSTextView`; 8 `isMovableByWindowBackground = false`; 9 hide generation counter so a re-show during the fade cancels the order-out and restores alpha; 10 `unowned` controller in `CommandBarHost` plus a `deinit` that removes the defaults observer and key monitor (the two fields are `nonisolated(unsafe)` because `isolated deinit` is still experimental in Swift 6.1); 11 `Hotkey.parse` accepts spaced ⇧ ⌥ ⌃ ⌘ glyphs (`parsesSpacedGlyphModifiers`); 12 explicit labels/hints on Deny and Approve once, decorative icons and key caps hidden, `Keycap.spoken` names, chip label without "Model ," when no model is selected, `announcementRequested` when an approval appears; 13 the chip is built from the core's `InferenceDestination` (`AppState.destination`), so `lan` providers read "LAN · TLS · host" / "LAN · unencrypted · host" with the matching symbols, and VoiceOver gets the core's full disclosure line.
+
+Validation actually run for the fixes: `swift test` 111 passed; previews re-rendered and the approval light/dark images inspected; `scripts/package-app.sh` + strict codesign; packaged launches with `--open-workspace` and `--open-command-bar` (window geometry via `CGWindowListCopyWindowInfo`, container config and models unchanged). Details in `docs/validation-results.md`.
+
+Still not verified (no Accessibility or Screen Recording permission for automation): the non-key approval presentation and the arming window in the live panel, VoiceOver output, the Settings status refresh, ⌘C with a selection, the fade re-show, and the LAN chip against a real `lan` provider.
+
 ## Suggested coordinator integration (not applied here)
 
 - `docs/project-state.md`: "A floating command bar (⌥Space by default, Settings → Command Bar) is the primary surface: request, model/destination chip, streaming-style status, inline approval (⌘↩ / ⌘⌫), result and error cards, ⌘K actions. It is a view over `AppState`; policy, approval and limits are unchanged in `LocalAgentCore`. Reduce Motion and Reduce Transparency are honoured. Verified: unit tests and a packaged launch with window geometry; live keyboard interaction not yet verified."
