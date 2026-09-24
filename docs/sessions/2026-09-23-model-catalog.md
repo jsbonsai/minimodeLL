@@ -98,7 +98,7 @@ See `docs/validation-results.md`. Summary:
 - A live tamper test was refused without launching the helper, and the restore worked.
 - An unsandboxed direct baseline agreed with these numbers.
 - GUI launch with no crash; Settings was not visually inspected.
-- Hosted CI: see the PR (the result is recorded in the structured handoff).
+- Hosted CI (`macos-15`) passed on `2d0e4bd`: push [run 35943293637](https://github.com/jsbonsai/minimodeLL/actions/runs/35943293637) and PR #20 [run 35943323556](https://github.com/jsbonsai/minimodeLL/actions/runs/35943323556). The workflow's `paths-ignore` skips Markdown-only commits after that.
 
 ## Not done / remaining WORK-002 items
 
