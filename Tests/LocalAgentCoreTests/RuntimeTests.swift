@@ -256,6 +256,22 @@ func eventually(_ condition: () async -> Bool) async -> Bool {
     #expect(host.lastProcess?.isRunning == false)
 }
 
+@Test func cancellingOneWaiterDoesNotAbortSharedStartup() async throws {
+    let host = FakeHost(); host.healthyAfterPolls = 30
+    let runtime = makeRuntime(host)
+    let first = Task { try await runtime.acquire(runtimeSettings(timeout: .seconds(30))) }
+    #expect(await eventually { host.launchCount == 1 })
+    let second = Task { try await runtime.acquire(runtimeSettings(timeout: .seconds(30))) }
+    try await Task.sleep(for: .milliseconds(20))
+    first.cancel()
+    await #expect(throws: (any Error).self) { try await first.value }
+    let endpoint = try await second.value
+    #expect(endpoint.baseURL.host == "127.0.0.1")
+    #expect(host.launchCount == 1)
+    #expect(await runtime.state == .ready)
+    await runtime.stop()
+}
+
 // MARK: Managed provider policy
 
 func managedConfig(_ provider: [String: Any], models: [[String: Any]]? = nil) throws -> AgentConfiguration {
