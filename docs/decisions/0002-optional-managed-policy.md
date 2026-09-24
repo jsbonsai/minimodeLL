@@ -20,6 +20,6 @@ Users can customize standalone settings; managed environments receive a complete
 
 Schema tests and profile lint pass. Real Jamf forced-preference precedence and sandbox behavior remain unvalidated. Consider stricter unmanaged-state behavior only as an explicit policy requirement with tests for enrollment/removal/failure, not an accidental side effect.
 
-## Clarification: both Jamf and Kandji (2026-09-23)
+## Clarification: both Jamf and Iru (formerly Kandji) (2026-09-23)
 
-The owner explicitly requested Kandji alongside Jamf. Keep artifacts and core behavior MDM-neutral. Jamf has a possible scoped test environment and will receive the first live validation. Kandji has no available tenant and is documented as best-effort until independently tested. Provider guides describe distribution/reporting differences; no separate application fork or policy schema is introduced.
+The owner explicitly requested Iru (formerly Kandji) alongside Jamf. Keep artifacts and core behavior MDM-neutral. Jamf has a possible scoped test environment and will receive the first live validation. Iru has no available tenant and is documented as best-effort until independently tested. Provider guides describe distribution/reporting differences; no separate application fork or policy schema is introduced. Kandji rebranded to Iru effective 2026-09-24 with migration deadline December 1, 2026.

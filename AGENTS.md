@@ -15,7 +15,7 @@ The repository is the durable source of project context. A chat transcript is no
 - Build a shareable, open-source, native Apple Silicon macOS assistant named **minimodeLL**.
 - Prioritize focused workplace tasks, approved local models, and existing HTTPS MCP services.
 - Support explicit LiteLLM gateway selection. Never introduce automatic cloud fallback.
-- Keep the app useful without MDM. Support Jamf and Kandji through the same optional macOS policy/deployment boundary. Jamf is the first live validation target; Kandji is best-effort and unvalidated without a tenant.
+- Keep the app useful without MDM. Support Jamf and Iru (formerly Kandji) through the same optional macOS policy/deployment boundary. Jamf is the first live validation target; Iru is best-effort and unvalidated without a tenant.
 - Preserve centralized branding and stable deployed identity. Do not scatter the product name through code.
 - Current delivery is a developer preview, not a self-contained or production-qualified release.
 - Do not revive historical PRD code or requirements without reading the superseding decisions.
