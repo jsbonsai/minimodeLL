@@ -346,12 +346,12 @@ struct MCPServerEditor: View {
             }
         } catch { status = error.localizedDescription; return }
         testing = true; status = "Connecting to \(spec.endpoint.host ?? "server")…"
-        let policy = managed ? state.snapshot?.configuration : nil
         let browser = browser
         Task {
             do {
-                let found = try await MCPServerProbe.discoverTools(spec, secretOverrides: secrets, managedPolicy: policy,
-                                                                   authorizationDelegate: browser)
+                // Core re-resolves policy and restricts testing to policy servers when management is active.
+                let found = try await MCPServerProbe.discoverToolsUnderCurrentPolicy(spec, secretOverrides: secrets,
+                                                                                     authorizationDelegate: browser)
                 merge(found)
                 status = found.isEmpty ? "Connected. The server offers no tools." : "Connected. \(found.count) tool(s) offered."
             } catch let failure as AgentError {

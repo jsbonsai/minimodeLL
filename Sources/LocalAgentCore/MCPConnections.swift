@@ -157,6 +157,15 @@ public struct DiscoveredTool: Sendable, Identifiable, Equatable {
 /// "Test connection" for Settings (ADR 0012): connect, list every tool the server offers (bounded), disconnect.
 /// Nothing is executed and nothing is logged. The allowlist stays the explicit `tools` array.
 public enum MCPServerProbe {
+    /// Entry point for the app: resolves the current policy itself (an invalid forced policy throws, failing closed)
+    /// and applies the managed-policy restriction when a forced policy is active.
+    public static func discoverToolsUnderCurrentPolicy(_ server: MCPServerSpec, secretOverrides: [String: String] = [:],
+                                                       authorizationDelegate: (any OAuthAuthorizationDelegate)? = nil) async throws -> [DiscoveredTool] {
+        let snapshot = try ConfigurationLoader.load()
+        return try await discoverTools(server, secretOverrides: secretOverrides,
+                                       managedPolicy: snapshot.managed ? snapshot.configuration : nil,
+                                       authorizationDelegate: authorizationDelegate)
+    }
     public static let maxPages = 10
     public static let maxTools = 200
     public static let maxDescriptionCharacters = 300
