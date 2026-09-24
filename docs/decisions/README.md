@@ -16,3 +16,4 @@ All initial decisions were recorded on 2026-09-23 from the implementation and ow
 | [0008](0008-bundled-runtime-lifecycle.md) | App-owned, pinned, sandbox-inheriting llama-server helper with authenticated readiness | Accepted; readiness slice implemented, Developer ID path pending |
 | [0009](0009-model-artifact-manifest.md) | Verified model artifact manifest, model store, and first approved model (Qwen3-4B-Instruct-2507 Q4_K_M) | Accepted; trimmed WORK-002 slice implemented, shared read-only artifacts and signed catalogs pending |
 | [0010](0010-static-site-generation.md) | Static website rendered from repository Markdown; Actions-based Pages deployment | Accepted; first deployment pending |
+| [0011](0011-lan-inference-providers.md) | `lan` provider kind: private-address/`.local` hosts, explicit insecure HTTP, request-time resolution check, LAN destination labels, `/models` probe | Accepted; live LM Studio check pending |

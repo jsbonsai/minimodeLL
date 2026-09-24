@@ -38,19 +38,15 @@ final class RejectRedirects: NSObject, URLSessionTaskDelegate, Sendable {
     }
 }
 public struct CompatibleInferenceClient: InferenceClient {
-    private enum Credential: Sendable { case none, keychain(String), ephemeral(String) }
-    private let baseURL: URL?
-    private let local: Bool
-    private let credential: Credential
-    /// Configured `local` or `litellm` provider. A `managed` provider must use `init(endpoint:)`.
+    private enum Target: Sendable { case configured(ProviderSpec), runtime(URL, key: String) }
+    private let target: Target
+    /// Configured `local`, `litellm` or `lan` provider. A `managed` provider must use `init(endpoint:)`.
     public init(provider: ProviderSpec) {
-        baseURL = provider.kind == .managed ? nil : provider.baseURL
-        local = provider.kind != .litellm
-        credential = provider.credentialAccount.map { .keychain($0) } ?? .none
+        target = .configured(provider)
     }
     /// App-owned runtime endpoint. The per-launch key is used only as a bearer header, never stored or logged.
     public init(endpoint: RuntimeEndpoint) {
-        baseURL = endpoint.baseURL; local = true; credential = .ephemeral(endpoint.apiKey)
+        target = .runtime(endpoint.baseURL, key: endpoint.apiKey)
     }
     public func complete(messages: [ChatMessage], tools: [FunctionTool], model: ModelSpec, limits: RunLimits) async throws -> ChatMessage {
         try await completeMeasured(messages: messages, tools: tools, model: model, limits: limits).message
@@ -72,21 +68,21 @@ public struct CompatibleInferenceClient: InferenceClient {
             let usage: CompletionMetrics.Usage?
             let timings: CompletionMetrics.Timings?
         }
-        guard let baseURL else { throw AgentError.rejected("The local model runtime is not ready.") }
-        try AgentConfiguration.validateEndpoint(baseURL, local: local)
+        // Endpoint rules are re-checked before every request; a `lan` .local name is re-resolved here (ADR 0011).
+        let baseURL: URL
+        let bearer: String?
+        switch target {
+        case .configured(let provider):
+            baseURL = try await provider.verifiedBaseURL()
+            bearer = try ProviderCredential.bearer(account: provider.credentialAccount)
+        case .runtime(let url, let key):
+            try AgentConfiguration.validateEndpoint(url, local: true)
+            baseURL = url; bearer = key
+        }
         var request = URLRequest(url: baseURL.appendingPathComponent("chat/completions"))
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        switch credential {
-        case .none: break
-        case .keychain(let account):
-            guard let token = try CredentialStore.read(account: account), !token.isEmpty else {
-                throw AgentError.rejected("Save the credential for \(account) in Settings first.")
-            }
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        case .ephemeral(let key):
-            request.setValue("Bearer \(key)", forHTTPHeaderField: "Authorization")
-        }
+        if let bearer { request.setValue("Bearer \(bearer)", forHTTPHeaderField: "Authorization") }
         request.httpBody = try JSONEncoder().encode(Request(model: model.model, messages: messages,
             tools: tools.isEmpty ? nil : tools, max_tokens: limits.outputTokens))
         let configuration = URLSessionConfiguration.ephemeral

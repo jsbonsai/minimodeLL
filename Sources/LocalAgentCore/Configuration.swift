@@ -7,7 +7,8 @@ public enum AgentError: Error, LocalizedError, Sendable {
 public struct ProviderSpec: Codable, Sendable, Identifiable, Equatable {
     /// `local`: an externally started loopback server. `litellm`: an HTTPS gateway.
     /// `managed`: the app-owned bundled llama-server (ADR 0008); it has no configured URL.
-    public enum Kind: String, Codable, Sendable { case local, litellm, managed }
+    /// `lan`: an OpenAI-compatible server on a private-network address or `.local` name (ADR 0011).
+    public enum Kind: String, Codable, Sendable { case local, litellm, managed, lan }
     public let id: String
     public let kind: Kind
     /// Required for `local` and `litellm`; must be absent for `managed` (the app picks a loopback port per launch).
@@ -15,13 +16,17 @@ public struct ProviderSpec: Codable, Sendable, Identifiable, Equatable {
     public let credentialAccount: String?
     /// Required for `managed`; must be absent otherwise.
     public let runtime: ManagedRuntimeSpec?
-    public init(id: String, kind: Kind, baseURL: URL?, credentialAccount: String? = nil, runtime: ManagedRuntimeSpec? = nil) {
+    /// `lan` only: `true` permits a plain `http` base URL. Must be absent (or false) for every other kind.
+    public let allowInsecureTransport: Bool?
+    public init(id: String, kind: Kind, baseURL: URL?, credentialAccount: String? = nil, runtime: ManagedRuntimeSpec? = nil,
+                allowInsecureTransport: Bool? = nil) {
         self.id = id; self.kind = kind; self.baseURL = baseURL; self.credentialAccount = credentialAccount; self.runtime = runtime
+        self.allowInsecureTransport = allowInsecureTransport
     }
 }
 extension ProviderSpec.Kind {
     /// Inference runs on this Mac, so physical-memory eligibility applies.
-    public var isOnDevice: Bool { self != .litellm }
+    public var isOnDevice: Bool { self == .local || self == .managed }
 }
 /// Policy for the app-owned bundled runtime. Context size comes from the provider's single model stub.
 /// Set exactly one of `artifact` (a verified catalog entry, ADR 0009) or `modelFile` (legacy, unverified).
@@ -122,12 +127,15 @@ public struct AgentConfiguration: Codable, Sendable {
         let catalog = effectiveCatalog
         try catalog.validate()
         for provider in providers {
+            guard provider.kind == .lan || provider.allowInsecureTransport != true else {
+                throw AgentError.rejected("allowInsecureTransport applies only to lan providers.")
+            }
             switch provider.kind {
-            case .local, .litellm:
-                guard let url = provider.baseURL, provider.runtime == nil else {
+            case .local, .litellm, .lan:
+                guard provider.baseURL != nil, provider.runtime == nil else {
                     throw AgentError.rejected("Provider \(provider.id) needs a baseURL and no runtime block.")
                 }
-                try Self.validateEndpoint(url, local: provider.kind == .local)
+                try Self.validateProviderEndpoint(provider)
             case .managed:
                 guard provider.baseURL == nil, provider.credentialAccount == nil, let runtime = provider.runtime else {
                     throw AgentError.rejected("Managed provider \(provider.id) needs a runtime block and no baseURL or credential.")
@@ -173,6 +181,35 @@ public struct AgentConfiguration: Codable, Sendable {
               (0...12).contains(limits.maxToolCalls), (128...32768).contains(limits.toolResultBytes),
               (10...300).contains(limits.timeoutSeconds) else {
             throw AgentError.rejected("Run limits are outside the supported safety bounds.")
+        }
+    }
+    /// Endpoint rules for a configured (non-`managed`) provider. Also re-checked immediately before every request.
+    public static func validateProviderEndpoint(_ provider: ProviderSpec) throws {
+        guard let url = provider.baseURL else { throw AgentError.rejected("Provider \(provider.id) needs a baseURL.") }
+        switch provider.kind {
+        case .local: try validateEndpoint(url, local: true)
+        case .litellm: try validateEndpoint(url, local: false)
+        case .lan: try validateLANEndpoint(url, allowInsecureTransport: provider.allowInsecureTransport == true)
+        case .managed: throw AgentError.rejected("Managed providers have no configured endpoint.")
+        }
+    }
+    /// `lan`: private address or `.local` name (see `LANHost`). HTTPS always; HTTP only when explicitly allowed.
+    public static func validateLANEndpoint(_ url: URL, allowInsecureTransport: Bool) throws {
+        guard url.user == nil, url.password == nil, url.query == nil, url.fragment == nil,
+              let host = url.host, !host.isEmpty else { throw AgentError.rejected("Invalid endpoint URL.") }
+        guard LANHost.classify(host) != nil else {
+            throw AgentError.rejected("LAN inference needs a private address (RFC 1918, link-local, IPv6 ULA) or a .local name.")
+        }
+        switch url.scheme {
+        case "https":
+            guard !allowInsecureTransport else {
+                throw AgentError.rejected("allowInsecureTransport is only meaningful for an http LAN URL; remove it.")
+            }
+        case "http":
+            guard allowInsecureTransport else {
+                throw AgentError.rejected("Plain HTTP to a LAN host requires allowInsecureTransport: true on that provider.")
+            }
+        default: throw AgentError.rejected("LAN inference must use HTTPS or explicitly allowed HTTP.")
         }
     }
     public static func validateEndpoint(_ url: URL, local: Bool) throws {

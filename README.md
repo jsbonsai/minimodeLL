@@ -32,7 +32,7 @@ minimodeLL runs approved local models on the employee's own Mac, calls allowlist
 
 - **Policy is enforced in code, not in a prompt.** Model, server, and tool allowlists plus per-tool approval rules live in a typed, validated policy that a system prompt or MCP annotation cannot override.
 - **One task, one bounded run.** Fresh context per task, one tool call per model response, and hard limits on input, context, output, steps, result size, and wall time. No background work; writes are never retried automatically.
-- **Local by default, cloud only by choice.** Local providers must be literal loopback HTTP; remote providers must be HTTPS; inference redirects are refused. A LiteLLM gateway is an explicit, labeled selection, never a fallback.
+- **Local by default, cloud only by choice.** Local providers must be literal loopback HTTP; LAN providers (a private IP or `.local` server such as LM Studio on another Mac) must use HTTPS or explicitly opt in to plain HTTP and are labeled `LAN · unencrypted`; LiteLLM providers must be HTTPS; inference redirects are refused. A LiteLLM gateway is an explicit, labeled selection, never a fallback.
 - **Governable at fleet scale.** The same JSON schema validates a user's `config.json` and an MDM-forced `PolicyJSON`; the repo generates the configuration profile and ships an offline diagnostics CLI for MDM scripts.
 - **Audit without content.** JSONL and OSLog carry timestamps, run IDs, event categories, and model/server/tool IDs. Prompts, responses, tool arguments, results, tokens, and raw remote error bodies are never logged.
 

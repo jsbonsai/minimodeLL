@@ -61,6 +61,8 @@ with open(path, 'wb') as f:
         'LSUIElement': True, 'NSHighResolutionCapable': True,
         'CFBundleURLTypes': [{'CFBundleURLName': identifier, 'CFBundleURLSchemes': [identifier]}],
         'NSAppTransportSecurity': {'NSAllowsLocalNetworking': True},
+        # macOS 15 Local Network privacy prompt text; shown only when a configured lan provider is contacted (ADR 0011).
+        'NSLocalNetworkUsageDescription': name + ' connects to an inference server on your local network only when your configuration names one.',
     }, f)
 PY
 identity="${SIGNING_IDENTITY:--}"

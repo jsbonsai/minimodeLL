@@ -18,6 +18,9 @@ final class AppState {
     var runtimeState: RuntimeState = .stopped
     var artifactStatuses: [String: ArtifactStatus] = [:]
     var modelNotice = ""
+    /// Result of the last "Test connection" (model IDs or a safe error). For later UI use.
+    var probeNotice = ""
+    var probedModelIDs: [String] = []
     private var runningTask: Task<Void, Never>?
     private let browser = BrowserAuthorization()
     /// Verified model files in the container's Models folder (ADR 0009).
@@ -45,6 +48,35 @@ final class AppState {
     func stopRuntime() { Task { await runtime.stop() } }
     var model: ModelSpec? { snapshot?.configuration.models.first { $0.id == selectedModel } }
     var provider: ProviderSpec? { snapshot?.configuration.providers.first { $0.id == model?.providerID } }
+    /// Destination shown before submission (ADR 0011). LAN labels disclose that the request and tool results go to that host.
+    var destination: InferenceDestination? { provider?.destination }
+    var destinationLabel: String { destination?.label ?? "Select an approved model" }
+    var destinationSymbol: String {
+        switch destination {
+        case .cloud: "cloud"
+        case .lan(_, true): "network"
+        case .lan(_, false): "network.badge.shield.half.filled"
+        case .thisMac, nil: "desktopcomputer"
+        }
+    }
+    /// "Test connection": GET <baseURL>/models on a configured provider. Shows model IDs only; nothing is logged.
+    func testConnection(providerID: String) {
+        guard let provider = snapshot?.configuration.providers.first(where: { $0.id == providerID }) else {
+            probeNotice = "Unknown provider."; return
+        }
+        probeNotice = "Testing \(provider.id)…"; probedModelIDs = []
+        Task {
+            do {
+                let ids = try await ProviderProbe.listModels(provider: provider)
+                probedModelIDs = ids
+                probeNotice = ids.isEmpty ? "Connected. The server reported no models." : "Connected. \(ids.count) model(s) available."
+            } catch let failure as AgentError {
+                probeNotice = failure.localizedDescription
+            } catch {
+                probeNotice = "Could not reach \(provider.id). Check the address, network, and credential."
+            }
+        }
+    }
     var memoryGB: UInt64 { ProcessInfo.processInfo.physicalMemory / 1_073_741_824 }
     func reload() {
         do {
