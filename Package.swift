@@ -11,7 +11,7 @@ let package = Package(
     dependencies: [.package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", exact: "0.12.1")],
     targets: [
         .target(name: "LocalAgentCore", dependencies: [.product(name: "MCP", package: "swift-sdk")], resources: [.process("Resources")]),
-        .executableTarget(name: "MinimodeLL", dependencies: ["LocalAgentCore"]),
+        .executableTarget(name: "MinimodeLL", dependencies: ["LocalAgentCore"], resources: [.copy("Resources/BrandAssets")]),
         .executableTarget(name: "AgentDiagnostics", dependencies: ["LocalAgentCore"]),
         .testTarget(name: "LocalAgentCoreTests", dependencies: ["LocalAgentCore"])
     ]

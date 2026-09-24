@@ -1,6 +1,6 @@
 # Agent handoff — read this first
 
-Last updated: 2026-09-23. Current work complete: durable documentation, public GitHub bootstrap, Jamf/Kandji planning and green hosted CI. Next implementation: WORK-001 / issue #1.
+Last updated: 2026-09-23. Current checkpoint: supplied brand assets integrated and local app rebuilt/restarted on feat/brand-assets. See docs/branding.md and docs/sessions/2026-09-23-brand-assets.md. Next major implementation remains WORK-001 / issue #1.
 
 ## Owner instructions that persist
 
@@ -55,4 +55,6 @@ Before stopping, update this document with the new active checkpoint, next actio
 
 ## End-of-session operational state
 
-All authorized source/documentation changes are committed and pushed to origin/main at the end of this session; verify with Git on resume. No new inference/mock servers or benchmark processes were started during the documentation session. The preview app may still be open from the earlier implementation session. There are no credentials or live service endpoints in the repository. Eight GitHub issues preserve the next work; begin with https://github.com/jsbonsai/minimodeLL/issues/1 unless the owner redirects priorities.
+The documentation bootstrap was committed to origin/main. The subsequent branding update is on feat/brand-assets; inspect its PR/CI and branch before resuming. No new inference/mock servers or benchmark processes were started during the documentation session. The preview app may still be open from the earlier implementation session. There are no credentials or live service endpoints in the repository. Eight GitHub issues preserve the next work; begin with https://github.com/jsbonsai/minimodeLL/issues/1 unless the owner redirects priorities.
+
+The latest local app uses the supplied Twin L app/menu icons, in-app logo, adaptive palette and Geist fonts. It was restarted after the branding build and left open. This changes presentation/resources only; runtime/MCP limitations above still apply.

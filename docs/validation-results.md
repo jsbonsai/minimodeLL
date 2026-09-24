@@ -25,3 +25,7 @@ The GitHub bootstrap continuation added a host-independent fake model fixture an
 - Foundation commit `283ad43`: [initial run](https://github.com/jsbonsai/minimodeLL/actions/runs/35936009136) failed because fake inference fixtures inherited a 16 GB real-model RAM threshold. Five tests stopped at memory admission; dependency/application compilation succeeded.
 - Corrected commit `3689e10`: [run 35936172136](https://github.com/jsbonsai/minimodeLL/actions/runs/35936172136) passed in 1m47s. All 16 tests, both example-policy checks, packaged app/signature verification, shared MDM readiness, profile generation and plist lint passed. This does not establish live Jamf/Kandji, OAuth, model quality or notarization.
 - A nonblocking actions/checkout Node runtime deprecation annotation remains for future workflow maintenance.
+
+## Brand asset integration
+
+The feat/brand-assets packaged app built and passed strict codesign verification, then was restarted locally. The branded dark-mode workspace was visually inspected. App icon metadata and packaged resource identity were checked. Light appearance and active/off icon states were not separately exercised; no core/provider behavior was changed.
