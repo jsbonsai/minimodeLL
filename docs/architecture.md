@@ -87,7 +87,7 @@ Physical memory is an eligibility check, not a prediction of free memory. Model 
 
 ## Policy
 
-MDM is an adapter at the configuration boundary, not a required service. Jamf and Kandji share the same artifacts; Jamf is the initial live validation target and Kandji remains best-effort until tenant testing is possible. Both managed and user policy use the same versioned Codable schema and validation. Forced managed preferences replace user configuration. There are no secrets in policy. The app re-resolves policy for every task and uses one immutable snapshot during the run.
+MDM is an adapter at the configuration boundary, not a required service. Jamf and Iru (formerly Kandji) share the same artifacts; Jamf is the initial live validation target and Iru remains best-effort until tenant testing is possible. Both managed and user policy use the same versioned Codable schema and validation. Forced managed preferences replace user configuration. There are no secrets in policy. The app re-resolves policy for every task and uses one immutable snapshot during the run.
 
 An application-level catalog controls requests from this application. It does not prevent an administrator or user with other software from using a different model outside this app.
 
