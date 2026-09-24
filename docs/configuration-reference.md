@@ -20,7 +20,7 @@ All fields below are required unless identified as optional in their nested obje
 | `systemPrompt` | string | Behavior guidance; not an authorization mechanism |
 | `providers` | array | Local, LAN, LiteLLM or managed-runtime connection definitions |
 | `models` | array | At least one approved model stub |
-| `mcpServers` | array | May be empty; defines permitted remote service connections |
+| `mcpServers` | array | May be empty; defines permitted remote service connections (editable in Settings → MCP Servers) |
 | `limits` | object | Bounded task execution settings |
 | `modelCatalog` | object, **optional** | Approved model artifacts and download hosts (below). Absent: the built-in catalog |
 
@@ -202,18 +202,47 @@ Migration for `modelCatalog`:
 
 | Field | Required | Meaning |
 | --- | --- | --- |
-| `id` | yes | Stable service ID |
-| `title` | yes | Display label |
-| `endpoint` | yes | HTTPS Streamable HTTP MCP endpoint |
+| `id` | yes | Stable service ID (`[A-Za-z0-9_-]{1,64}`). Settings cannot rename it; delete and re-add instead |
+| `title` | yes | Display name, nonblank, at most 100 characters |
+| `endpoint` | yes | HTTPS Streamable HTTP MCP endpoint. No user info, query string or fragment |
 | `tools` | yes | Explicit tool rules; empty means no discovery/connection for this server |
-| `credentialAccount` | no | Keychain account for pre-supplied bearer token |
-| `oauth` | no | Public native OAuth client configuration |
+| `credentialAccount` | no | Bearer auth mode: Keychain account holding a pre-issued token |
+| `oauth` | no | OAuth auth mode: public native OAuth client configuration |
+| `enabled` | no | Boolean, default `true`. `false` means the server is never connected and its tools do not count toward the 16-tool budget |
+| `headers` | no | Custom request headers (see below), at most 16 |
 
-Use at most one of `credentialAccount` and `oauth`. A server with neither is attempted without authentication. All configured tool rules across all servers must total at most 16. Names must be unique within a server. The examples intentionally contain no enabled tools and no real company URLs.
+The auth mode is derived: `oauth` → OAuth sign-in, `credentialAccount` → bearer token, neither → no authentication. Use at most one of `credentialAccount` and `oauth`. All tool rules across **enabled** servers must total at most 16. Names must be unique within a server and 1–128 bytes. The examples intentionally contain no real company URLs.
 
-A tool rule has `name` (exact MCP tool name) and `requiresConfirmation` (boolean). This boolean is app policy, not inherited from the server's annotations. Setting it false permits automatic execution when selected by the model. Explicitly review each rule before deploying it. The model receives temporary aliases; the app resolves aliases back to the approved service/name pair.
+A tool rule has `name` (exact MCP tool name) and `requiresConfirmation` (boolean). This boolean is app policy, not inherited from the server's annotations. Setting it false permits automatic execution when selected by the model. Explicitly review each rule before deploying it. The model receives temporary aliases; the app resolves aliases back to the approved service/name pair. Tools a server offers but the rules omit stay blocked.
 
 Discovery processes up to 10 pages per server. Approved schemas outside the supported subset block the run. Execution accepts text results only. See the architecture document for schema details and transport-memory limitations.
+
+### Custom headers (ADR 0012)
+
+Each entry is either `{"name": "X-Tenant", "value": "acme"}` (a non-secret value stored in configuration) or `{"name": "X-Api-Key", "secretAccount": "mcp.notes.header.x-api-key"}` (the value is read from the app's Keychain service under that account when a task or test connects). Exactly one of `value` or `secretAccount` is required.
+
+- `name`: 1–64 characters of the HTTP token grammar (letters, digits, ``!#$%&'*+-.^_`|~``), unique case-insensitively within the server.
+- Reserved and always rejected (case-insensitive): `Host`, `Content-Length`, `Content-Type`, `Content-Encoding`, `Accept`, `Accept-Encoding`, `Connection`, `Keep-Alive`, `Transfer-Encoding`, `TE`, `Trailer`, `Upgrade`, `Expect`, `Cookie`, `Cookie2`, `Set-Cookie`, `WWW-Authenticate`, `Mcp-Session-Id`, `Mcp-Protocol-Version`, `Last-Event-ID`, `Cache-Control`, `Origin`, `Forwarded`, `Via`, `Range`, `If-Range`, `Date`, and any name beginning `Proxy-`, `Sec-` or `Mcp-`.
+- `Authorization` is rejected when the server uses bearer or OAuth. With no auth mode it is allowed, but only with `secretAccount`.
+- Values (inline, and secret values when used): 1–4,096 bytes of printable ASCII with inner spaces or tabs only; no line breaks, control characters, non-ASCII, or leading/trailing whitespace.
+- `secretAccount`: `[A-Za-z0-9_.:@-]{1,128}`. Settings generates `mcp.<serverID>.header.<lowercased-name>`; a missing secret stops the connection with a message naming the header, before any request is sent.
+
+Custom header values are applied after the MCP SDK's protocol headers on every request, and are never logged.
+
+### Settings editor behavior
+
+Settings → MCP Servers edits the user `config.json` through `MCPServerStore`:
+
+- Only `mcpServers` is rewritten (other keys are preserved; the file is written with sorted keys). The whole resulting configuration must validate before the atomic write.
+- Bearer tokens go to `mcp.<serverID>.bearer` (an existing hand-written `credentialAccount` is kept). Secret values go only to Keychain, never to the file.
+- Deleting a server, removing a secret header, or changing the OAuth endpoint/client binding deletes the Keychain items the server owned (`mcp.<serverID>.` prefix and its OAuth token account) unless another server or provider still references them. Accounts without that prefix are never deleted.
+- Under a forced managed policy, all edits are refused and servers are shown read-only. Test connection is limited to the policy's own server definitions using saved credentials. To supply a secret header for a managed server, save it in Settings → Credentials under the `secretAccount` the policy names.
+
+### Migration
+
+- Schema version stays `1`. Existing server entries decode unchanged; absent `enabled` means enabled and absent `headers` means none.
+- Older builds ignore `enabled` and `headers`. An older build would **connect** a server marked `enabled: false` and send no custom headers. Roll out the app before relying on these keys in managed policy.
+- Validation became stricter for existing entries in small ways: a blank `title`, an empty `credentialAccount` string, and an empty or over-128-byte tool name are now rejected.
 
 ## OAuth object
 
