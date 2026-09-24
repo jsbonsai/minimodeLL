@@ -18,7 +18,7 @@ All fields below are required unless identified as optional in their nested obje
 | --- | --- | --- |
 | `schemaVersion` | integer | Exactly `1` |
 | `systemPrompt` | string | Behavior guidance; not an authorization mechanism |
-| `providers` | array | Local or LiteLLM connection definitions |
+| `providers` | array | Local, LAN, LiteLLM or managed-runtime connection definitions |
 | `models` | array | At least one approved model stub |
 | `mcpServers` | array | May be empty; defines permitted remote service connections |
 | `limits` | object | Bounded task execution settings |
@@ -31,16 +31,60 @@ Provider, model and MCP server IDs must each be unique within their collection a
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `id` | yes | Reference used by model stubs |
-| `kind` | yes | `local`, `litellm` or `managed` |
-| `baseURL` | `local`/`litellm` only | API base, normally ending in `/v1`; app appends `chat/completions`. Must be absent for `managed` |
+| `kind` | yes | `local`, `lan`, `litellm` or `managed` |
+| `baseURL` | `local`/`lan`/`litellm` only | API base, normally ending in `/v1`; app appends `chat/completions` (and `models` for the connection test). Must be absent for `managed` |
 | `credentialAccount` | no | Keychain account for a bearer token. Must be absent for `managed` |
-| `runtime` | `managed` only | App-owned bundled runtime settings (below). Must be absent for `local`/`litellm` |
+| `runtime` | `managed` only | App-owned bundled runtime settings (below). Must be absent for `local`/`lan`/`litellm` |
+| `allowInsecureTransport` | `lan` only, optional | `true` permits a plain `http` LAN URL. Rejected on every other kind and on an `https` LAN URL (ADR 0011) |
 
 `local` means an externally started loopback server that the app does not own. `managed` means the app launches, verifies, unloads and stops its own bundled `llama-server` (ADR 0008).
+
+`lan` means an OpenAI-compatible server on the local network that the app does not own (LM Studio, Ollama, `llama-server`); see [LAN providers](#lan-providers-kind-lan) below.
 
 Local URLs must use HTTP and a literal loopback host (`127.0.0.1` or IPv6 loopback). `localhost` is intentionally rejected by current validation. Remote providers require HTTPS. Credentials in the URL, query strings and fragments are rejected for all configured endpoints. The inference client rejects redirects and requires HTTP 200.
 
 A missing configured credential fails the run. Omitting `credentialAccount` sends no bearer header. This is useful for development with an external server; the `managed` runtime instead uses a random per-launch key that is never configured or stored. Selecting a LiteLLM model is explicit; there is no local-to-cloud fallback.
+
+### LAN providers (`kind: "lan"`)
+
+Authoritative implementation: `Sources/LocalAgentCore/LANProvider.swift` (`LANHost`, `ProviderProbe`) and `AgentConfiguration.validateLANEndpoint` (ADR 0011).
+
+| Host form | Accepted |
+| --- | --- |
+| IPv4 literal | 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16 (except 169.254.169.254). Strict dotted decimal only |
+| IPv6 literal | fc00::/7 (ULA), fe80::/10 (link-local, optional `%zone`, written `[fe80::1%25en0]` in the URL) |
+| Name | `<label>.local` mDNS names (letters, digits, hyphens) |
+| Anything else | Rejected: public IPs, loopback (use `local`), 100.64/10, IPv4-mapped IPv6, `localhost`, and every non-`.local` DNS name (`lmstudio`, `lmstudio.lan`, `*.home.arpa`, public names), over HTTP **and** HTTPS |
+
+Transport and request rules:
+
+- `https` is always allowed. `http` requires `"allowInsecureTransport": true` on that provider. The destination label then reads `LAN · unencrypted`, and prompts, tool results and any bearer token cross the network in plain text.
+- Credentials in the URL, query strings and fragments are rejected, redirects are refused, and HTTP 200 is required, as for other providers.
+- Before every request the endpoint is validated again. A `.local` name is resolved again through the system resolver (mDNS). The request is refused if any resolved address is outside the LAN ranges above, or if the name does not resolve. A small DNS-rebinding window remains between this check and URLSession's own lookup; use HTTPS or a literal IP when the local network is not trusted (ADR 0011).
+- `credentialAccount` is optional. LM Studio (Developer → server settings → require API key) and `llama-server --api-key` accept a bearer token. Save the token in the Credentials tab under that account.
+- `lan` is not on-device inference, so `minimumMemoryGB` is not enforced (set it to 0).
+- The label before submission is `LAN · TLS · your request and tool results are sent to <host>` or `LAN · unencrypted · … in plain text`.
+- The packaged app declares `NSAllowsLocalNetworking` (ATS) and `NSLocalNetworkUsageDescription`. On macOS 15 the first connection to another LAN host may show the system Local Network prompt; denying it makes requests fail.
+
+Test connection (lists the model IDs the server reports at `GET <baseURL>/models`; prints IDs only, never bodies or tokens):
+
+```sh
+swift run minimodell-diagnostics --config my-config.json --probe-provider lan-lmstudio   # unsandboxed; exit 2 when unreachable
+build/minimodeLL.app/Contents/MacOS/minimodell --probe-provider lan-lmstudio            # sandboxed, uses the resolved policy
+```
+
+Use a returned ID as the model stub's `model`. LM Studio uses its loaded model identifiers; Ollama uses `name:tag`; `llama-server` uses its `--alias`.
+
+Example (`Config/lan-lmstudio.example.json`; `192.168.1.50` and the model ID are placeholders):
+
+```json
+{"id": "lan-lmstudio", "kind": "lan", "baseURL": "http://192.168.1.50:1234/v1",
+ "allowInsecureTransport": true, "credentialAccount": "lan.lmstudio"}
+```
+
+Typical base URLs: LM Studio `http://<ip>:1234/v1`, Ollama `http://<ip>:11434/v1` (set `OLLAMA_HOST=0.0.0.0` on the server), and `llama-server --host <lan ip> --port 8080` gives `http://<ip>:8080/v1`. By default each of these servers listens only on its own loopback address. Exposing one to the LAN is a decision about the server Mac.
+
+Managed policy: a forced `PolicyJSON` replaces the whole configuration, so a LAN provider exists under management only if the administrator lists one. There is no separate LAN switch. Migration: schema version stays `1`, and existing configurations are unchanged. Older builds reject `"kind": "lan"` (unknown value), and that rejection fails closed, so update the app before you deploy a policy that contains a LAN provider.
 
 ### Managed runtime object (`runtime`)
 
@@ -83,7 +127,7 @@ Migration: schema version stays `1`. Existing configurations are unchanged and s
 | `minimumMemoryGB` | yes | Nonnegative total physical memory threshold; enforced for local models |
 | `contextTokens` | yes | 2,048–131,072; must exceed output token limit |
 
-`minimumMemoryGB` uses bytes divided by 1,073,741,824. It does not reserve memory or account for other applications. A cloud model is not subject to local model-memory eligibility. A stub has no file URL, checksum, quantization, template, license or runtime revision; for the bundled runtime those live in the model artifact the provider's `runtime.artifact` references (below). Display names (`title`, `displayName`) are presentation only; IDs are identity.
+`minimumMemoryGB` uses bytes divided by 1,073,741,824. It does not reserve memory or account for other applications. A cloud or LAN model is not subject to local model-memory eligibility. A stub has no file URL, checksum, quantization, template, license or runtime revision; for the bundled runtime those live in the model artifact the provider's `runtime.artifact` references (below). Display names (`title`, `displayName`) are presentation only; IDs are identity.
 
 ## Model catalog object (`modelCatalog`, optional)
 
@@ -198,8 +242,9 @@ The inference response has a separate fixed 262,144-byte transport cap. MCP buff
 ```sh
 swift run minimodell-diagnostics --config Config/enterprise.example.json
 swift run minimodell-diagnostics --config Config/bundled-runtime.example.json
+swift run minimodell-diagnostics --config Config/lan-lmstudio.example.json
 scripts/make-profile.py Config/enterprise.example.json build/minimodell.mobileconfig
 plutil -lint build/minimodell.mobileconfig
 ```
 
-The profile generator checks that input parses as JSON but does not run the Swift validator. Always validate first. Diagnostics is metadata-only and cannot prove service connectivity, model quality, OAuth correctness or real MDM delivery.
+The profile generator checks that input parses as JSON but does not run the Swift validator. Always validate first. Diagnostics is metadata-only and makes no network request unless `--probe-provider <id>` is given. That option lists model IDs from one provider's `/models` endpoint. Diagnostics cannot prove model quality, OAuth correctness or real MDM delivery.

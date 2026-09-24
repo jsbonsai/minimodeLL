@@ -53,7 +53,7 @@ Three SwiftPM targets plus tests (`Package.swift`), with one pinned dependency: 
 
 ### Policy resolution (`Configuration.swift`)
 
-Order: forced `PolicyJSON` in the `org.minimodell.agent` managed preference domain → user `config.json` in Application Support → bundled defaults. Forced managed policy is a **complete replacement**; user settings can never extend its model/tool allowlists; invalid forced policy **fails closed** (throws, blocks requests — no fallback). Local providers must be literal loopback HTTP; remote providers must be HTTPS; URLs may not contain credentials, query strings, or fragments; inference redirects are refused. There is no automatic cloud fallback, ever.
+Order: forced `PolicyJSON` in the `org.minimodell.agent` managed preference domain → user `config.json` in Application Support → bundled defaults. Forced managed policy is a **complete replacement**; user settings can never extend its model/tool allowlists; invalid forced policy **fails closed** (throws, blocks requests — no fallback). Local providers must be literal loopback HTTP; `lan` providers (ADR 0011) must be a private IP literal or `*.local` name, HTTPS or HTTP only with `allowInsecureTransport: true`; LiteLLM providers must be HTTPS; URLs may not contain credentials, query strings, or fragments; inference redirects are refused. There is no automatic cloud fallback, ever.
 
 Adding a configuration field means updating the Codable type, validation, both example configs where relevant, `docs/configuration-reference.md`, and considering managed-policy behavior/migration.
 

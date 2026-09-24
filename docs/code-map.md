@@ -11,7 +11,7 @@
 - `scripts/package-app.sh`: builds SwiftPM products, creates Info.plist, copies branding/licenses, embeds the fetched runtime when present (`Contents/Helpers`, `Contents/Frameworks`, rpath rewrite, llama.cpp license, lock copy), signs nested code inside-out, then CLI and app, and runs `codesign --verify --strict --deep`. `REQUIRE_RUNTIME=1` fails if the runtime was not fetched. Defaults to debug and ad-hoc signing.
 - `scripts/package-dmg.sh`: release build and drag-to-Applications image; optional application-certificate signing.
 - `scripts/package-pkg.sh`: release build and `/Applications` component package; optional installer-certificate signing.
-- `.github/workflows/ci.yml`: macOS test, example policy validation (three examples), app packaging without and with the fetched runtime plus nested-signature/entitlement checks, profile generation/lint. Hosted execution must be checked, not inferred from local success.
+- `.github/workflows/ci.yml`: macOS test, example policy validation (four examples), app packaging without and with the fetched runtime plus nested-signature/entitlement checks, profile generation/lint. Hosted execution must be checked, not inferred from local success.
 
 ## Core (`Sources/LocalAgentCore`)
 
@@ -19,8 +19,9 @@
 | --- | --- | --- |
 | `Brand.swift` | Reads branding, stable identity, support directory | Packaged app/CLI resource lookup precedes SwiftPM fallback |
 | `Resources/Branding.json` | Display name, version, bundle identity | Identity changes affect policy, Keychain and callbacks |
-| `Configuration.swift` | Codable schema, endpoint/ID/limit validation, source precedence | Forced managed policy replaces user config; invalid forced policy throws |
-| `Inference.swift` | Chat/tool DTOs, `InferenceClient`, compatible HTTP client, context estimate | Refuses redirects, caps HTTP response at 262,144 bytes, sends nonstreaming Chat Completions |
+| `Configuration.swift` | Codable schema, endpoint/ID/limit validation (`validateProviderEndpoint`, `validateLANEndpoint`), source precedence | Forced managed policy replaces user config; invalid forced policy throws; `allowInsecureTransport` only on `lan` + `http` |
+| `Inference.swift` | Chat/tool DTOs, `InferenceClient`, compatible HTTP client, context estimate | Refuses redirects, caps HTTP response at 262,144 bytes, sends nonstreaming Chat Completions; re-validates the provider endpoint (`verifiedBaseURL`) before every request |
+| `LANProvider.swift` | `LANHost` (private-address / `.local` classification, request-time resolution check), `InferenceDestination` labels, `ProviderSpec.verifiedBaseURL`, `ProviderProbe` (`GET /models` connection test) | Non-`.local` names and public/loopback addresses rejected; any public address in a `.local` answer refuses the request; probe returns model IDs only, 64 KiB cap (ADR 0011) |
 | `MCPConnections.swift` | SDK client lifecycle, paginated discovery, aliases, allowlists, text results | At most 10 discovery pages; OAuth storage bound to endpoint and client ID hash |
 | `Credentials.swift` | Keychain bearer storage and OAuth `TokenStorage` adapter | Tokens never enter configuration files; persistence failure behavior is limited |
 | `ToolSchema.swift` | Supported schema subset and argument checks | Unsupported validation keywords fail closed |
@@ -36,10 +37,12 @@
 
 ## Application (`Sources/MinimodeLL`)
 
-- `MinimodeLLApp.swift`: scene definitions plus menu, task workspace, settings and approval views. UI uses shared observable state and system materials. The task view shows local/cloud destination before submission.
-- `AppState.swift`: loads/reloads policy, model selection, config and credential saves, task ownership, approval wait, user-safe error presentation. One shared `busy` state prevents concurrent tasks across windows. Reloads policy at submission and checks destination changes (whole provider equality). Owns the `RuntimeManager`, mirrors its state into `runtimeState`, picks `ManagedInferenceClient` for `managed` providers, stops the runtime when policy drops it, and calls `terminateForQuit()` on `willTerminate`.
+- `MinimodeLLApp.swift`: scene definitions plus menu, task workspace, settings and approval views. UI uses shared observable state and system materials. The task view shows the destination label (`AppState.destinationLabel`/`destinationSymbol`, from core `InferenceDestination`: this Mac, LAN · TLS, LAN · unencrypted, cloud) before submission.
+- `AppState.swift`: loads/reloads policy, model selection, config and credential saves, task ownership, approval wait, user-safe error presentation. One shared `busy` state prevents concurrent tasks across windows. Reloads policy at submission and checks destination changes (whole provider equality). `testConnection(providerID:)` runs `ProviderProbe` and stores `probeNotice`/`probedModelIDs` for a later Settings UI. Owns the `RuntimeManager`, mirrors its state into `runtimeState`, picks `ManagedInferenceClient` for `managed` providers, stops the runtime when policy drops it, and calls `terminateForQuit()` on `willTerminate`.
 - `MinimodeLLApp.swift` also contains `RuntimeStatus` (a minimal readiness line under the destination label; the menu shows the same summary and an "Unload local model" item) and `RuntimeSmokeCommand` (`--runtime-smoke-test [--tool] [--show-reply] [--hold N]`), which exits before any window is shown. It also holds `ModelsSettings`/`ModelRow` (the Settings → Models tab: status, Download, Cancel, Delete, Import via `fileImporter`) and `ModelDownloadCommand` (`--model-download [artifact-id]`, a headless verified download inside the sandbox).
 - `AppState.swift` also owns the `ModelStore`, which is passed to the `RuntimeManager`. It mirrors artifact statuses and exposes download/cancel/delete/import. Deleting the artifact the policy uses stops the runtime first.
+
+- `ProviderProbeCommand.swift`: `minimodell --probe-provider <id>`, the sandboxed connection test against the resolved policy (JSON with model IDs; exit 0 only when reachable).
 
 ## Runtime guard (`Sources/RuntimeGuard/main.swift`)
 
@@ -50,10 +53,11 @@
 
 ## Diagnostics and tests
 
-- `Sources/AgentDiagnostics/main.swift`: `--config` file or current-user policy validation; emits JSON metadata, exits nonzero on failure; performs no network requests or inference.
+- `Sources/AgentDiagnostics/main.swift`: `--config` file or current-user policy validation; emits JSON metadata including `providerDestinations`, exits nonzero on failure; performs no network requests or inference unless `--probe-provider <id>` is given (then one `GET /models`, exit 2 when unreachable).
 - `Tests/LocalAgentCoreTests/PolicyTests.swift`: endpoint/config/context/schema/audit tests and configuration fixture builder.
 - `Tests/LocalAgentCoreTests/RunnerTests.swift`: fake inference/tools, action approval/rejection, input/output bounds, cancellation, duplicate IDs and audit failure. These are orchestration tests, not model accuracy tests.
 - `Tests/LocalAgentCoreTests/RuntimeTests.swift`: `FakeHost`/`FakeProcess` lifecycle tests (startup, key handling, timeout, exit during startup, crash while ready, foreign/any-key servers, alias mismatch, idle unload with leases, stop escalation, quit, policy change, cancellation, guard launch), managed-provider validation, example-config decoding, and real loopback port reservation. No model or server is started.
+- `Tests/LocalAgentCoreTests/LANProviderTests.swift`: LAN host classification (accepted/rejected sets), HTTP/`allowInsecureTransport` rules, URL credential/query/fragment rejection, flag-on-other-kinds rejection, resolved-address checks, request-time rejection before network use, model-list parsing, destination labels, LAN example config. No network is used.
 - `Tests/LocalAgentCoreTests/ModelStoreTests.swift`: `FakeTransport` store tests and catalog/policy validation. Covers verify-before-promote, hash and size mismatch, oversize, cancellation cleanup, resume, disk-space refusal, catalog/host/allowDownloads gates, import verification, tamper re-verification, delete, the runtime launching only verified artifacts, and the runtime tag gate. No network is used.
 - `scripts/mock-inference.py`: optional local HTTP fixture for UI checks. It returns an explicitly labeled fixed response, does not run a model, and makes no outbound requests. It occupies port 9931 until stopped.
 
@@ -61,6 +65,7 @@
 
 - `Config/local.example.json`: mirrors the starter local provider/model stub.
 - `Config/enterprise.example.json`: adds a LiteLLM placeholder and four OAuth MCP placeholder endpoints with empty tool allowlists.
+- `Config/lan-lmstudio.example.json`: one `lan` provider (`http://192.168.1.50:1234/v1` placeholder, `allowInsecureTransport: true`, `credentialAccount` `lan.lmstudio`) and its model stub (placeholder model ID; use one reported by `--probe-provider`).
 - `Config/bundled-runtime.example.json`: one `managed` provider referencing the built-in verified artifact `qwen3-4b-instruct-2507-q4_k_m`, and its single model stub (16 GB, 8,192 context).
 - `scripts/make-profile.py`: converts a reviewed policy JSON file into a forced macOS preference profile. No credentials should be supplied.
 - `scripts/mdm-readiness.sh`: shared read-only app-signature and explicit-policy validation for either Jamf or Kandji.
