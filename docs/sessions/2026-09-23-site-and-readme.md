@@ -30,7 +30,7 @@ This session ran in parallel with other agents in separate worktrees. Branch: `f
 
 ### Workflows
 
-- `.github/workflows/pages.yml`: build job (checkout@v4, setup-python@v5 / 3.12, hash-pinned install, build, check, `upload-pages-artifact@v3`), deploy job (`deploy-pages@v4`, `github-pages` environment, `pages: write` + `id-token: write` only there), `concurrency: pages`, triggers: push to `main` on site/docs/README/SECURITY/CONTRIBUTING/CHANGELOG/Branding.json/workflow paths, pull requests on the same paths (build + check only, `if: github.event_name != 'pull_request'` on deploy), `workflow_dispatch`.
+- `.github/workflows/pages.yml`: build job (checkout@v7, setup-python@v7 / 3.12, hash-pinned install, build, check, `upload-pages-artifact@v5`), deploy job (`deploy-pages@v5`, `github-pages` environment, `pages: write` + `id-token: write` only there), `concurrency: pages`, triggers: push to `main` on site/docs/README/SECURITY/CONTRIBUTING/CHANGELOG/Branding.json/workflow paths, pull requests on the same paths (build + check only, `if: github.event_name != 'pull_request'` on deploy), `workflow_dispatch`.
 - `.github/workflows/ci.yml`: `paths-ignore` extended with `site/**` and `.github/workflows/pages.yml` so website-only pushes do not run the macOS build. The existing `**/*.md` ignore already excluded README/docs changes.
 
 ### Documentation
@@ -54,7 +54,21 @@ Not run: `swift test`, packaging, or any app checks (no application code changed
 
 ## GitHub actions taken
 
-Recorded in the "Resume" section after they run; see the structured result returned to the coordinator for the PR URL and CI status.
+- Commits `d2e08e5` (site + workflows) and `718f72a` (README, docs, ADR, session record) pushed to `origin/feat/site-and-readme`.
+- Pull request: https://github.com/jsbonsai/minimodeLL/pull/16 "Branded README and GitHub Pages site" (not merged by this session).
+- `gh api -X POST repos/jsbonsai/minimodeLL/pages -f build_type=workflow` succeeded: `build_type: workflow`, `html_url: https://jsbonsai.github.io/minimodeLL/`, `https_enforced: true`, `status: null` (no deployment has run yet).
+- `gh repo edit` set the description ("IT-governable local AI for Macs: ...") and added topics `apple-silicon`, `enterprise`, `llama-cpp`, `local-llm`, `mdm`, `swiftui` alongside the existing `jamf`, `kandji`, `litellm`, `local-ai`, `macos`, `mcp`, `swift`. The `kandji` topic was left in place for discoverability.
+- Homepage URL and social preview image were **not** set (deferred until deployment; see below).
+- CI on the branch: see "CI results" below.
+
+## CI results
+
+At commit `718f72a` (before the action-version bump in the following commit):
+
+- `macOS validation` (push): success, https://github.com/jsbonsai/minimodeLL/actions/runs/35940909102 (2m25s). It ran because `ci.yml` itself changed; website-only pushes are ignored from now on.
+- `GitHub Pages` (pull_request, build + check only, deploy skipped by design): success, https://github.com/jsbonsai/minimodeLL/actions/runs/35940982820 (build 9s, `github-pages` artifact uploaded). Annotations warned that `checkout@v4` / `setup-python@v5` target Node 20; the workflow was then bumped to `checkout@v7`, `setup-python@v7`, `upload-pages-artifact@v5`, `deploy-pages@v5` (current majors per each action's latest release). That bump is verified by the PR run that follows the next push, not by this record.
+- `macOS validation` (pull_request) was still in progress when this record was written; check https://github.com/jsbonsai/minimodeLL/pull/16/checks.
+- `ci.yml` still uses `actions/checkout@v4` (Node 20 deprecation warning); left for the coordinator since it is outside this stream.
 
 ## Not done / needs owner
 
