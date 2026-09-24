@@ -1,5 +1,7 @@
 # Agent handoff — read this first
 
+> **Paused 2026-09-23 for a macOS upgrade.** Read [checkpoints/2026-09-23-macos-26-upgrade.md](checkpoints/2026-09-23-macos-26-upgrade.md) first: the owner is moving the dev Mac to macOS Tahoe 26.7 + Xcode 26 so the next sprint can implement Liquid Glass across the whole app (WORK-020, #31). WORK-009 command bar (#28) and the smart-dash fix (#30) are merged.
+
 Last updated: 2026-09-24. Current checkpoint: five parallel streams merged to `main` today and were integrated by a coordinator pass — see `docs/sessions/2026-09-23-coordinator.md` for the full merge/review/issue-triage record. `main` now has: Twin L branding (PR #9), a GitHub org/label/milestone cleanup and the Kandji→Iru rename (PR #14), a branded README and a **live** GitHub Pages site (PR #16, now the repository homepage), an app-owned bundled llama.cpp runtime readiness slice (PR #19, WORK-001 partial), and a verified model catalog with the first real model running in that runtime, Qwen3-4B-Instruct-2507 Q4_K_M (PR #20, WORK-002 partial). Read `docs/project-state.md` for the current capability matrix and `docs/backlog.md` for the full WORK-001–WORK-017 status. Two sprint-2 work streams (Raycast-style UI redesign WORK-009/#10, MCP server CRUD WORK-017/#22) and a LAN-inference stream (WORK-016/#21) are running in parallel with this integration.
 
 ## Owner instructions that persist

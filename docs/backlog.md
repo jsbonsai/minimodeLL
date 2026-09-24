@@ -60,7 +60,7 @@ Status: open, not started. Related to, but distinct from, WORK-009's Raycast-sty
 
 Tracking: https://github.com/jsbonsai/minimodeLL/issues/10 · `area:ui`, `priority:p2` · Milestone: **v0.2** (moved from v0.4; renamed from issue title "Raycast-inspired UI/UX redesign")
 
-Status: **in progress — sprint 2.** Owner wants a slick, launcher-style UI: translucent vibrancy materials, global hotkey invocation, command-bar search/filter, smooth animations, keyboard-first navigation, and explicit Reduce Motion/Transparency support. Moved into the v0.2 milestone and running now as a design sprint in parallel with WORK-016/WORK-017, ahead of further real-service testing, per current owner steering (see `docs/handoff.md`). Relates to WORK-008.
+Status: **merged (PR #28) with all 13 review fixes.** Owner feedback: the command bar and the rest of the app don't feel like one product and lack transparency; continued as WORK-020 (#31). Previously: in progress — sprint 2. Owner wants a slick, launcher-style UI: translucent vibrancy materials, global hotkey invocation, command-bar search/filter, smooth animations, keyboard-first navigation, and explicit Reduce Motion/Transparency support. Moved into the v0.2 milestone and running now as a design sprint in parallel with WORK-016/WORK-017, ahead of further real-service testing, per current owner steering (see `docs/handoff.md`). Relates to WORK-008.
 
 ## WORK-010 — Connect first live HTTPS MCP server
 
@@ -125,4 +125,10 @@ Status: future work, design first. Turn a power user's tuned llama-server settin
 Tracking: https://github.com/jsbonsai/minimodeLL/issues/26 · `area:policy`, `area:mdm`, `priority:p3` · Milestone: v0.4
 
 Status: exploration only. Cheapest first: a client-side policy builder on the Pages site and a Jamf JSON Schema manifest (WORK-015), before any hosted console.
+
+## WORK-020 — Unified Liquid Glass design across the whole app
+
+Tracking: https://github.com/jsbonsai/minimodeLL/issues/31 · `area:ui`, `priority:p1` · Milestone: v0.2
+
+Status: **next, after the owner upgrades the dev Mac to macOS Tahoe 26.7 + Xcode 26.** One design system for every surface, Liquid Glass on macOS 26+ with material fallback on 14/15, CI on a macOS 26 image. Plan in `docs/checkpoints/2026-09-23-macos-26-upgrade.md`.
 
