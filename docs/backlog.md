@@ -102,14 +102,27 @@ Status: open, owner request 2026-09-23, future-work checklist, nothing implement
 
 Tracking: https://github.com/jsbonsai/minimodeLL/issues/21 · `area:runtime`, `area:policy`, `priority:p1` · Milestone: v0.2
 
-**Status: in progress — sprint 2.** Owner request 2026-09-23: let a small laptop offload inference to an OpenAI-compatible server on the local network (LM Studio, Ollama, or `llama-server` on the owner's M2 Max, to be provided later). Proposed: a new `lan` provider kind restricted to RFC 1918/link-local/`.local` hosts, HTTPS preferred with plain HTTP only behind an explicit `allowInsecureTransport: true`, managed policy able to forbid it entirely, clear UI labeling of the destination before submission, and no automatic fallback between providers. Needs its own ADR.
+**Status: implemented (PR #24 merged); live validation against LM Studio on the owner's M2 Max pending.** Follow-ups: Settings "Test connection" button, approval-sheet destination line, optional address pinning to close the DNS-rebinding window, `.home.arpa` support if needed. Original request 2026-09-23: let a small laptop offload inference to an OpenAI-compatible server on the local network (LM Studio, Ollama, or `llama-server` on the owner's M2 Max, to be provided later). Proposed: a new `lan` provider kind restricted to RFC 1918/link-local/`.local` hosts, HTTPS preferred with plain HTTP only behind an explicit `allowInsecureTransport: true`, managed policy able to forbid it entirely, clear UI labeling of the destination before submission, and no automatic fallback between providers. Needs its own ADR.
 
 ## WORK-017 — MCP server management in Settings: CRUD, custom headers, auth modes
 
 Tracking: https://github.com/jsbonsai/minimodeLL/issues/22 · `area:mcp`, `area:ui`, `priority:p1` · Milestone: v0.2
 
-**Status: in progress — sprint 2.** Owner request 2026-09-23: full create/read/update/delete for HTTPS MCP servers in Settings instead of raw JSON — per-server tool allowlist and `requiresConfirmation`, auth mode (none/bearer/native OAuth), custom HTTP headers (secret values in Keychain, protocol-critical headers forbidden), a "test connection" flow, and forced-policy servers shown locked/read-only. Complements WORK-010 (the first live server) and WORK-013 (future governance switches).
+**Status: implemented (PR #27 merged); live MCP interoperability pending the owner's server.** Follow-ups: sandboxed `--probe-mcp` CLI, OAuth sign-out, GET/SSE header test, `allowUserHTTPServers` (WORK-013). Roll the app out before policies use `enabled`/`headers`: older builds ignore those keys. Original request 2026-09-23: full create/read/update/delete for HTTPS MCP servers in Settings instead of raw JSON — per-server tool allowlist and `requiresConfirmation`, auth mode (none/bearer/native OAuth), custom HTTP headers (secret values in Keychain, protocol-critical headers forbidden), a "test connection" flow, and forced-policy servers shown locked/read-only. Complements WORK-010 (the first live server) and WORK-013 (future governance switches).
 
 ---
 
 Owner steering as of this integration (see `docs/handoff.md` for the full checkpoint): a Raycast-style design sprint (WORK-009) is running now, before further real-service testing; a live MCP server URL and the M2 Max LAN LM Studio setup (feeding WORK-010/WORK-016) will follow later; the Jamf sandbox path (WORK-006/WORK-011) goes through a coworker, and the Iru path through vendor outreach. The GitHub Project board is not yet created — it needs `gh auth refresh -s project,read:project` run by the owner (an agent token cannot grant itself that scope); see `docs/handoff.md`.
+
+## WORK-018 — Shareable runtime profiles through Jamf/Iru
+
+Tracking: https://github.com/jsbonsai/minimodeLL/issues/25 · `area:runtime`, `area:mdm`, `area:policy`, `priority:p2` · Milestone: v0.3
+
+Status: future work, design first. Turn a power user's tuned llama-server settings into a typed, range-validated runtime profile (never raw command strings), importable from a pasted command with accepted/rejected flags explained, exportable for Jamf/Iru admins to scope to a department, and recorded in audit provenance. A policy capability (`allowCustomRuntimeProfiles`) gates who may author profiles.
+
+## WORK-019 — Admin console / policy builder exploration
+
+Tracking: https://github.com/jsbonsai/minimodeLL/issues/26 · `area:policy`, `area:mdm`, `priority:p3` · Milestone: v0.4
+
+Status: exploration only. Cheapest first: a client-side policy builder on the Pages site and a Jamf JSON Schema manifest (WORK-015), before any hosted console.
+

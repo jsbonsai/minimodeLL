@@ -76,3 +76,10 @@ The previous "website plan only" checkpoint (below, for history) has since been 
 ### Historical: document the website plan only (superseded 2026-09-23/24)
 
 The owner asked for GitHub README/documentation branding and a GitHub-hosted landing/documentation site, then explicitly requested only a documented plan before another agent takes over. [Website plan](website-plan.md) contains the full proposed content, asset paths, architecture, publication options, dependency on unmerged PR #9, and exact resume steps. [Session record](sessions/2026-09-23-website-plan.md) records the actual discovery. This checkpoint is preserved for history; the site described in it is now built and live (see above), so do not treat "plan only" as the current state.
+
+## Sprint 2 merged (2026-09-23, coordinator)
+
+- PR #23 docs integration, PR #24 LAN inference (WORK-016) and PR #27 MCP server management (WORK-017) are merged to `main`. Both passed independent review; one reviewer suggestion (save Keychain secrets after the config write) was deliberately not applied because the reverse order can leave config pointing at a missing secret, while the current order leaves at worst an inert Keychain item (documented in ADR 0012).
+- PR #28 Raycast-inspired command bar (WORK-009) had five major review findings (approval could be triggered by a ⌘↩ typed in another app, dark-mode button contrast, warning-pill contrast, workspace opener not wired at launch, stale hotkey status). A follow-up agent is fixing them on `feat/raycast-design`; do not merge #28 until those fixes and CI are green.
+- New backlog captured from the owner: WORK-018 shareable runtime profiles through Jamf/Iru (#25) and WORK-019 admin console / policy builder exploration (#26).
+- **Owner live checks now unblock the most value:** LM Studio on the M2 Max (steps in `sessions/2026-09-23-lan-inference.md`, Remaining work 1) and the production Streamable HTTP MCP server (Settings → MCP Servers → Add server → Test connection).

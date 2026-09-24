@@ -123,6 +123,24 @@ Not tested:
 - **Other build and signing paths:** release-configuration smoke with this model, Developer ID and notarization were not tested.
 - **Real connectors:** a real MCP server or company account was not used, by design.
 
+## LAN inference providers (WORK-016, PR #24) — 2026-09-23
+
+Environment: M1 Pro 32 GB, macOS 15.7.7, Swift 6.1. Full tables are in [the session record](sessions/2026-09-23-lan-inference.md#validation-actually-run-this-mac-macos-15--darwin-246-apple-silicon-xcode-toolchain-swift-61).
+
+- `swift test`: 71 passed on the branch (15 new LAN tests, parameterized over 15 accepted and 39 rejected hosts). Independent reviewer re-run: 71/71.
+- Diagnostics exit 0 on all four example configurations; negative cases (public IP, HTTP without `allowInsecureTransport`) exit 1.
+- `/models` probe against an uncommitted Python fixture bound to this Mac's LAN IP and `.local` name: succeeded unsandboxed and from the sandboxed packaged app; redirect refused; unresolvable `.local` failed closed; missing key surfaced as HTTP 401 without body text.
+- **Not tested:** a real LM Studio/Ollama/llama-server on another host, chat completions over LAN, a Keychain bearer token end to end, the macOS Local Network prompt for another host, HTTPS with a private CA, real IPv6 LAN hosts, and the destination label on screen.
+
+## MCP server management (WORK-017, PR #27) — 2026-09-23
+
+Details in [the session record](sessions/2026-09-23-mcp-server-settings.md).
+
+- `swift test`: 88 passed after merging `main` (coordinator re-run before merge). Reviewer re-run: 88/88.
+- Header injection verified against an in-process Streamable HTTP fixture (POST path); the GET/SSE path relies on reading SDK 0.12.1 source, not a test.
+- Diagnostics pass on all five example configurations; a config with a reserved `Host` header fails validation.
+- **Not tested:** any real MCP service or OAuth sign-in through Test connection, HTTPS test server, the Settings UI on screen, real Keychain save/delete from the editor, a real forced MDM profile locking the editor.
+
 ## Command bar and design system (WORK-009, branch feat/raycast-design)
 
 Environment: Apple M1 Pro, 32 GB, macOS 15.7.7 (24G720), Xcode 16.4, Swift 6.1. Session record: `docs/sessions/2026-09-23-raycast-design.md`. Spec: `docs/design/raycast-redesign.md`.
