@@ -8,7 +8,7 @@
   </a>
 </p>
 
-<p align="center"><strong>Small tasks. On your Mac.</strong><br>
+<p align="center"><strong>Local models. MCP tools. Managed by IT.</strong><br>
 A native macOS menu bar assistant for small workplace tasks, built so the people who run Macs can govern it.</p>
 
 <p align="center">

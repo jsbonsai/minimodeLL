@@ -34,7 +34,7 @@
   --bg-sunken: #E9EBE6;
   --text: var(--mm-ink);
   --text-muted: var(--mm-graphite);
-  --text-faint: #8A8E96;
+  --text-faint: #62666E;
   --border: var(--mm-mist);
   --border-strong: #CCCFC9;
   --accent: var(--mm-signal);
@@ -68,7 +68,7 @@
     --bg-sunken: #111317;
     --text: var(--mm-paper);
     --text-muted: #A3A7AF;
-    --text-faint: #7C8089;
+    --text-faint: #8C9099;
     --border: #33363E;
     --border-strong: #454951;
     --accent: var(--mm-signal-dark);
@@ -88,7 +88,7 @@
   --bg-sunken: #111317;
   --text: var(--mm-paper);
   --text-muted: #A3A7AF;
-  --text-faint: #7C8089;
+  --text-faint: #8C9099;
   --border: #33363E;
   --border-strong: #454951;
   --accent: var(--mm-signal-dark);

@@ -10,7 +10,7 @@ This directory is the source of the GitHub Pages site. It is a small static buil
 | `config.json` | Site URL, repository URL, description, and the ordered list of documents to render |
 | `assets/styles.css`, `assets/site.js` | Styles from `design-assets/minimodeLL-brand/tokens`; theme toggle, mobile nav, scroll reveal |
 | `assets/fonts/` | Geist and Geist Mono variable fonts with `OFL.txt` (SIL Open Font License) |
-| `assets/brand/`, `assets/*.png`, `assets/favicon.*` | Curated copies of the supplied web/logo assets |
+| `assets/*.png`, `assets/favicon.*` | Curated copies of the supplied web/logo assets |
 | `build.py` | Generator; reads `Sources/LocalAgentCore/Resources/Branding.json` for the product name and version |
 | `check.py` | Post-build check: internal links, fragments, placeholders, required `<head>` metadata |
 | `requirements.txt`, `requirements-lock.txt` | Pinned Python-Markdown (`--require-hashes` in CI) |

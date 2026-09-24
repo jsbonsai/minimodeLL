@@ -181,7 +181,9 @@ def build(out_dir: Path) -> int:
     shutil.copytree(SITE_DIR / "assets", out_dir / "assets")
     for static in ("index.html", "404.html"):
         text = (SITE_DIR / static).read_text(encoding="utf-8")
-        (out_dir / static).write_text(render_placeholders(text, page_ctx("./")), encoding="utf-8")
+        # Pages serves 404.html at whatever URL was requested, so its links must be absolute.
+        root = site_url if static == "404.html" else "./"
+        (out_dir / static).write_text(render_placeholders(text, page_ctx(root)), encoding="utf-8")
 
     manifest = {
         "name": name,

@@ -1,4 +1,4 @@
-# ADR 0008: Static website generated from repository Markdown with a minimal Python build
+# ADR 0010: Static website generated from repository Markdown with a minimal Python build
 
 Status: Accepted (2026-09-23). Deployment pending first run on `main`.
 

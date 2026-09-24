@@ -36,7 +36,7 @@ This session ran in parallel with other agents in separate worktrees. Branch: `f
 ### Documentation
 
 - `docs/website-plan.md`: status block and implementation table added at the top; original plan retained below.
-- `docs/decisions/0008-static-site-generation.md`: generator and publication decision; `docs/decisions/README.md` row added.
+- `docs/decisions/0010-static-site-generation.md`: generator and publication decision; `docs/decisions/README.md` row added.
 - This session record. `docs/sessions/README.md` was intentionally not edited to avoid parallel-branch conflicts; the coordinator should add the link.
 
 ## Validation actually run

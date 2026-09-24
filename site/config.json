@@ -2,7 +2,7 @@
   "siteUrl": "https://jsbonsai.github.io/minimodeLL/",
   "repoUrl": "https://github.com/jsbonsai/minimodeLL",
   "defaultBranch": "main",
-  "tagline": "Small tasks. On your Mac.",
+  "tagline": "Local models. MCP tools. Managed by IT.",
   "description": "minimodeLL is a native macOS menu bar assistant for small workplace tasks: approved local models, allowlisted MCP tools, human approval, content-free audit, and IT-governable policy through Jamf or Iru (formerly Kandji). No silent cloud fallback.",
   "brandingJson": "Sources/LocalAgentCore/Resources/Branding.json",
   "docs": [
@@ -44,7 +44,7 @@
         {"source": "docs/decisions/0005-mcp-and-native-oauth.md", "slug": "decisions/0005-mcp-and-native-oauth", "title": "0005 MCP and native OAuth"},
         {"source": "docs/decisions/0006-audit-and-validation.md", "slug": "decisions/0006-audit-and-validation", "title": "0006 Audit and validation"},
         {"source": "docs/decisions/0007-branding-and-distribution.md", "slug": "decisions/0007-branding-and-distribution", "title": "0007 Branding and distribution"},
-        {"source": "docs/decisions/0008-static-site-generation.md", "slug": "decisions/0008-static-site-generation", "title": "0008 Static site generation"}
+        {"source": "docs/decisions/0010-static-site-generation.md", "slug": "decisions/0010-static-site-generation", "title": "0010 Static site generation"}
       ]
     },
     {
