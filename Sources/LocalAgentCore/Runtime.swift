@@ -87,6 +87,7 @@ public actor RuntimeManager {
     private var current: Running?
     private var pending: (any RuntimeProcess)?
     private var starting: (settings: RuntimeLaunchSettings, task: Task<RuntimeEndpoint, any Error>)?
+    private var startWaiters: Set<UUID> = []
     private var leases = 0
     private var idleTask: Task<Void, Never>?
     private var generation = 0
@@ -204,7 +205,15 @@ public actor RuntimeManager {
             task = Task { try await self.start(settings) }
             starting = (settings, task)
         }
-        let endpoint = try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
+        // The startup task is shared by every concurrent waiter. A cancelled waiter must not abort startup for
+        // the others, so the shared task is cancelled only when every waiter has been cancelled.
+        let waiter = UUID()
+        startWaiters.insert(waiter)
+        defer { startWaiters.remove(waiter) }
+        let endpoint = try await withTaskCancellationHandler { try await task.value } onCancel: {
+            Task { await self.startWaiterCancelled(waiter, task: task) }
+        }
+        try Task.checkCancellation()
         guard let current, current.endpoint.baseURL == endpoint.baseURL, current.process.isRunning, state == .ready else {
             throw AgentError.rejected("The local model runtime stopped during startup.")
         }
@@ -213,6 +222,11 @@ public actor RuntimeManager {
     }
 
     var leaseCount: Int { leases }
+
+    private func startWaiterCancelled(_ waiter: UUID, task: Task<RuntimeEndpoint, any Error>) {
+        startWaiters.remove(waiter)
+        if startWaiters.isEmpty, starting?.task == task { task.cancel() }
+    }
 
     private func start(_ settings: RuntimeLaunchSettings) async throws -> RuntimeEndpoint {
         generation += 1
