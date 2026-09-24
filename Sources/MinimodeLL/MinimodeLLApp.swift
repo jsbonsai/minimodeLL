@@ -3,24 +3,47 @@ import LocalAgentCore
 
 @main
 struct MinimodeLLApp: App {
-    @State private var state = AppState()
+    @State private var state: AppState
+    /// Floating command bar, global hotkey and keyboard map (docs/design/raycast-redesign.md).
+    private let commandBar: CommandBarController
     init() {
         if CommandLine.arguments.contains("--runtime-smoke-test") { RuntimeSmokeCommand.runAndExit() }
         if CommandLine.arguments.contains("--model-download") { ModelDownloadCommand.runAndExit() }
+        if let index = CommandLine.arguments.firstIndex(of: "--render-design-previews"), CommandLine.arguments.indices.contains(index + 1) {
+            DesignPreviewCommand.runAndExit(directory: CommandLine.arguments[index + 1])
+        }
         BrandAssets.registerFonts()
+        let appState = AppState()
+        _state = State(initialValue: appState)
+        commandBar = CommandBarController(state: appState)
+        commandBar.install()
+        // Debug aid for launch verification without a keyboard: `minimodell --open-command-bar`.
+        if CommandLine.arguments.contains("--open-command-bar") {
+            let commandBar = commandBar
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { commandBar.show() }
+        }
     }
     var body: some Scene {
-        WindowGroup(Brand.displayName, id: "workspace") {
-            WorkspaceView(state: state).tint(.mmAccent).font(.custom("Geist-Regular", size: 13))
-        }
-        .defaultSize(width: 820, height: 650)
         MenuBarExtra {
-            MenuContent(state: state)
+            MenuContent(state: state, commandBar: commandBar)
         } label: {
             Image(nsImage: BrandAssets.menuIcon(state.brandState))
                 .accessibilityLabel(Brand.displayName)
         }
-        Settings { SettingsView(state: state).tint(.mmAccent).frame(width: 720, height: 560) }
+        WindowGroup(Brand.displayName, id: "workspace") {
+            WorkspaceView(state: state).designRoot()
+                .background(WorkspaceOpener(commandBar: commandBar))
+        }
+        .defaultSize(width: 820, height: 650)
+        Settings { SettingsView(state: state, commandBar: commandBar).designRoot().frame(width: 720, height: 560) }
+    }
+}
+/// Gives the command bar a way to open the workspace scene, which only a view inside the App can do.
+private struct WorkspaceOpener: View {
+    let commandBar: CommandBarController
+    @Environment(\.openWindow) private var openWindow
+    var body: some View {
+        Color.clear.onAppear { commandBar.onOpenWorkspace = { openWindow(id: "workspace") } }
     }
 }
 /// `minimodell --runtime-smoke-test [--tool] [--show-reply] [--hold N]`: exercises the bundled runtime under the
@@ -114,10 +137,13 @@ enum ModelDownloadCommand {
 private final class SummaryBox: @unchecked Sendable { var summary: ModelDownloadCommand.Summary? }
 struct MenuContent: View {
     @Bindable var state: AppState
+    let commandBar: CommandBarController
     @Environment(\.openWindow) private var openWindow
     var body: some View {
         Text(state.busy ? "Task in progress" : "Ready for a small task")
-        Button("Open \(Brand.displayName)") {
+        Button("Command bar    \(commandBar.hotkeyLabel)") { commandBar.show() }
+        Button("Open workspace window") {
+            commandBar.onOpenWorkspace = { openWindow(id: "workspace") }
             openWindow(id: "workspace"); NSApp.activate(ignoringOtherApps: true)
         }
         if state.usesManagedRuntime || state.runtimeState != .stopped { Text(state.runtimeState.summary) }
@@ -223,6 +249,7 @@ struct WorkspaceView: View {
 }
 struct SettingsView: View {
     @Bindable var state: AppState
+    let commandBar: CommandBarController
     var body: some View {
         TabView {
             VStack(alignment: .leading, spacing: 12) {
@@ -239,6 +266,7 @@ struct SettingsView: View {
                 Text(state.settingsNotice).font(.caption)
             }.padding(24).tabItem { Label("Configuration", systemImage: "slider.horizontal.3") }
             ModelsSettings(state: state).padding(24).tabItem { Label("Models", systemImage: "cpu") }
+            CommandBarSettings(controller: commandBar).padding(24).tabItem { Label("Command Bar", systemImage: "command") }
             Form {
                 Text("Credentials stay in your macOS Keychain.").font(.headline)
                 Text("For a provider or bearer-authenticated MCP server, use its credentialAccount value below. OAuth servers open browser sign-in when first used.").foregroundStyle(.secondary)
