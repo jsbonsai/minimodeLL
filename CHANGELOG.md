@@ -6,6 +6,7 @@ No production release has been published. Version 0.1.0 identifies the current d
 
 ### Added
 
+- Raycast-inspired command bar (WORK-009, PR #28): global ⌥Space floating panel with destination chip, inline tool approval (⌘↩/⌘⌫ with a 0.6 s arming window so keystrokes meant for another app can't approve), ⌘K actions, design tokens, Reduce Motion/Transparency fallbacks, preview renderer (`--render-design-previews`).
 - `lan` inference provider kind (ADR 0011, WORK-016, PR #24): OpenAI-compatible servers on private IPv4/IPv6 addresses or `.local` names (LM Studio, Ollama, llama-server). HTTPS, or plain HTTP only with `allowInsecureTransport: true`; `.local` names are re-resolved and checked before every request; the destination label shows `LAN · TLS` or `LAN · unencrypted` before submission; connection test via `minimodell-diagnostics --probe-provider <id>` / `minimodell --probe-provider <id>`; optional Keychain bearer token; example `Config/lan-lmstudio.example.json`; Info.plist adds `NSLocalNetworkUsageDescription`.
 - Settings → MCP Servers (ADR 0012, WORK-017, PR #27): add, edit, enable/disable, delete and test HTTPS MCP servers; per-server auth mode (none, bearer, OAuth), custom request headers with secret values in Keychain and reserved protocol headers rejected, tool approval chosen from discovered tools. Servers from forced managed policy are read-only. New optional `enabled` and `headers` keys.
 - App-owned bundled llama.cpp runtime (`managed` provider): pinned official `ggml-org/llama.cpp` prebuilt fetched and verified by `scripts/fetch-runtime.sh`, embedded in the packaged app, launched and supervised by `RuntimeManager` with a `minimodell-runtime-guard` helper (orphan cleanup on app termination), random loopback port, per-launch key, authenticated readiness, and idle unload. Adds the `network.server` entitlement for loopback listening and a `--runtime-smoke-test` CLI mode. Proven live only with a 135M smoke-test model, not yet a qualified model (WORK-001, partial; PR #19).
@@ -34,4 +35,5 @@ No production release has been published. Version 0.1.0 identifies the current d
 
 ### Fixed
 
+- macOS smart dashes/quotes no longer corrupt API keys, headers or JSON typed into the app; typographic characters in header values get a specific error (PR #30).
 - Fake-inference unit fixtures no longer assume a 16 GB CI machine; a dedicated test covers physical-memory admission separately.
