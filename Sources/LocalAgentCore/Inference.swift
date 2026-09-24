@@ -53,6 +53,11 @@ public struct CompatibleInferenceClient: InferenceClient {
         baseURL = endpoint.baseURL; local = true; credential = .ephemeral(endpoint.apiKey)
     }
     public func complete(messages: [ChatMessage], tools: [FunctionTool], model: ModelSpec, limits: RunLimits) async throws -> ChatMessage {
+        try await completeMeasured(messages: messages, tools: tools, model: model, limits: limits).message
+    }
+    /// `complete` plus content-free usage/timing numbers when the server reports them (llama-server does).
+    public func completeMeasured(messages: [ChatMessage], tools: [FunctionTool], model: ModelSpec,
+                                 limits: RunLimits) async throws -> (message: ChatMessage, metrics: CompletionMetrics?) {
         struct Request: Encodable {
             let model: String
             let messages: [ChatMessage]
@@ -64,6 +69,8 @@ public struct CompatibleInferenceClient: InferenceClient {
         struct Response: Decodable {
             struct Choice: Decodable { let message: ChatMessage; let finish_reason: String? }
             let choices: [Choice]
+            let usage: CompletionMetrics.Usage?
+            let timings: CompletionMetrics.Timings?
         }
         guard let baseURL else { throw AgentError.rejected("The local model runtime is not ready.") }
         try AgentConfiguration.validateEndpoint(baseURL, local: local)
@@ -103,8 +110,28 @@ public struct CompatibleInferenceClient: InferenceClient {
         guard choice.finish_reason != "length" else {
             throw AgentError.rejected("The model reached the output limit. Try a smaller task.")
         }
-        return choice.message
+        let metrics = result.usage == nil && result.timings == nil ? nil : CompletionMetrics(usage: result.usage, timings: result.timings)
+        return (choice.message, metrics)
     }
+}
+
+/// Token counts and server-side timings. Numbers only; never content.
+public struct CompletionMetrics: Codable, Sendable {
+    public struct Usage: Codable, Sendable {
+        public let prompt_tokens: Int?
+        public let completion_tokens: Int?
+    }
+    /// llama-server extension to the OpenAI response.
+    public struct Timings: Codable, Sendable {
+        public let prompt_n: Int?
+        public let prompt_ms: Double?
+        public let prompt_per_second: Double?
+        public let predicted_n: Int?
+        public let predicted_ms: Double?
+        public let predicted_per_second: Double?
+    }
+    public let usage: Usage?
+    public let timings: Timings?
 }
 
 public enum ContextBudget {

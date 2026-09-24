@@ -28,7 +28,9 @@
 | `Audit.swift` | Actor-owned JSONL rotation and OSLog metadata | No task content fields; write failure blocks progression |
 | `Runtime.swift` | `RuntimeState`, `RuntimeEndpoint`, `RuntimeProcess`/`RuntimeHost` seams, `RuntimeManager` actor, `ManagedInferenceClient` | Per-launch key never logged/persisted; key-challenge readiness; leases gate idle unload; crash → `failed`, no auto restart or cloud fallback |
 | `RuntimeHost.swift` | `SystemRuntimeHost`: loopback port reservation, `Process` launch with explicit env and discarded output, loopback-only bounded probes | Refuses non-loopback probe URLs and redirects |
-| `RuntimeSmokeTest.swift` | Content-free end-to-end runtime check used by `minimodell --runtime-smoke-test` | Fixed synthetic prompt; reports timings/byte counts only |
+| `RuntimeSmokeTest.swift` | End-to-end runtime check used by `minimodell --runtime-smoke-test`; optional synthetic tool round trip through `TaskRunner` with the in-process `SyntheticOrderTool` fixture | Fixed synthetic prompts; reports timings, token counts and throughput; reply text only with `--show-reply` |
+| `ModelCatalog.swift` | `ModelArtifact`, `ModelCatalogSpec`, `ModelCatalog` (built-in catalog JSON), `effectiveCatalog`, `artifact(for:)` | Invalid catalog fails validation with no fallback; a policy catalog replaces the built-in one; approved hosts are exact names or subdomains |
+| `ModelStore.swift` | `ModelStore` actor (download, resume, cancel, delete, import, verify, status stream), `ArtifactTransport` seam, `URLSessionArtifactTransport` | Size + SHA-256 before atomic promotion; redirects only to approved HTTPS hosts; body capped at `sizeBytes`; disk space + 512 MiB margin; changed files re-hashed before use |
 
 `InferenceClient` and `ToolClient` make deterministic testing possible without a model, server or account. They are internal engineering seams, not a plugin authorization system.
 
@@ -36,7 +38,8 @@
 
 - `MinimodeLLApp.swift`: scene definitions plus menu, task workspace, settings and approval views. UI uses shared observable state and system materials. The task view shows local/cloud destination before submission.
 - `AppState.swift`: loads/reloads policy, model selection, config and credential saves, task ownership, approval wait, user-safe error presentation. One shared `busy` state prevents concurrent tasks across windows. Reloads policy at submission and checks destination changes (whole provider equality). Owns the `RuntimeManager`, mirrors its state into `runtimeState`, picks `ManagedInferenceClient` for `managed` providers, stops the runtime when policy drops it, and calls `terminateForQuit()` on `willTerminate`.
-- `MinimodeLLApp.swift` also contains `RuntimeStatus` (minimal readiness line under the destination label; menu shows the same summary and an "Unload local model" item) and `RuntimeSmokeCommand` (`--runtime-smoke-test [--hold N]`, exits before any window is shown).
+- `MinimodeLLApp.swift` also contains `RuntimeStatus` (a minimal readiness line under the destination label; the menu shows the same summary and an "Unload local model" item) and `RuntimeSmokeCommand` (`--runtime-smoke-test [--tool] [--show-reply] [--hold N]`), which exits before any window is shown. It also holds `ModelsSettings`/`ModelRow` (the Settings → Models tab: status, Download, Cancel, Delete, Import via `fileImporter`) and `ModelDownloadCommand` (`--model-download [artifact-id]`, a headless verified download inside the sandbox).
+- `AppState.swift` also owns the `ModelStore`, which is passed to the `RuntimeManager`. It mirrors artifact statuses and exposes download/cancel/delete/import. Deleting the artifact the policy uses stops the runtime first.
 
 ## Runtime guard (`Sources/RuntimeGuard/main.swift`)
 
@@ -51,13 +54,14 @@
 - `Tests/LocalAgentCoreTests/PolicyTests.swift`: endpoint/config/context/schema/audit tests and configuration fixture builder.
 - `Tests/LocalAgentCoreTests/RunnerTests.swift`: fake inference/tools, action approval/rejection, input/output bounds, cancellation, duplicate IDs and audit failure. These are orchestration tests, not model accuracy tests.
 - `Tests/LocalAgentCoreTests/RuntimeTests.swift`: `FakeHost`/`FakeProcess` lifecycle tests (startup, key handling, timeout, exit during startup, crash while ready, foreign/any-key servers, alias mismatch, idle unload with leases, stop escalation, quit, policy change, cancellation, guard launch), managed-provider validation, example-config decoding, and real loopback port reservation. No model or server is started.
+- `Tests/LocalAgentCoreTests/ModelStoreTests.swift`: `FakeTransport` store tests and catalog/policy validation. Covers verify-before-promote, hash and size mismatch, oversize, cancellation cleanup, resume, disk-space refusal, catalog/host/allowDownloads gates, import verification, tamper re-verification, delete, the runtime launching only verified artifacts, and the runtime tag gate. No network is used.
 - `scripts/mock-inference.py`: optional local HTTP fixture for UI checks. It returns an explicitly labeled fixed response, does not run a model, and makes no outbound requests. It occupies port 9931 until stopped.
 
 ## Management and examples
 
 - `Config/local.example.json`: mirrors the starter local provider/model stub.
 - `Config/enterprise.example.json`: adds a LiteLLM placeholder and four OAuth MCP placeholder endpoints with empty tool allowlists.
-- `Config/bundled-runtime.example.json`: one `managed` provider with a placeholder `approved-model.gguf` and its single model stub.
+- `Config/bundled-runtime.example.json`: one `managed` provider referencing the built-in verified artifact `qwen3-4b-instruct-2507-q4_k_m`, and its single model stub (16 GB, 8,192 context).
 - `scripts/make-profile.py`: converts a reviewed policy JSON file into a forced macOS preference profile. No credentials should be supplied.
 - `scripts/mdm-readiness.sh`: shared read-only app-signature and explicit-policy validation for either Jamf or Kandji.
 - `scripts/jamf-inventory.sh`: read-only architecture/RAM Extension Attribute.
@@ -65,7 +69,7 @@
 ## Common changes
 
 - New provider behavior: extend the provider abstraction and policy validation; add tests; document data destination and credentials.
-- New model: update a reviewed catalog/configuration now; future verified manifests will own artifact/template provenance.
+- New model: add a `ModelArtifact` (built-in catalog in `ModelCatalog.swift`, or a policy `modelCatalog`) with a pinned revision URL, size and SHA-256 taken from the host metadata and checked independently, license, template notes and runtime tags. Record live measurements in `docs/validation-results.md` and update ADR 0009 if the default changes.
 - New MCP server: configuration first, then interoperability work only where required; do not hardcode vendor logic in the task runner.
 - New configuration field: update Codable type, validation, both examples when relevant, configuration reference, managed-policy behavior and migration expectations.
 - New execution safeguard: enforce in the core before the side effect, add a negative test proving execution did not occur, update security/architecture/state docs.

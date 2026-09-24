@@ -63,7 +63,7 @@ struct RuntimeLaunchSettings: Sendable, Equatable {
         // agent tools, no slot inspection endpoint, and no server logs (they could contain content).
         ["--model", modelPath.path, "--host", "127.0.0.1", "--port", String(port),
          "--alias", alias, "--ctx-size", String(contextTokens * parallel), "--parallel", String(parallel),
-         "--no-webui", "--offline", "--no-slots", "--log-disable"]
+         "--jinja", "--no-webui", "--offline", "--no-slots", "--log-disable"]
     }
 }
 
@@ -94,14 +94,28 @@ public actor RuntimeManager {
     private var observers: [UUID: AsyncStream<RuntimeState>.Continuation] = [:]
 
     private let guardURL: URL?
+    private let modelStore: ModelStore?
+    private let runtimeTag: String?
 
     /// `guardURL`: optional supervisor that launches the server and stops it if the app dies (see RuntimeGuard).
+    /// `modelStore`: verifies catalog artifacts before launch (ADR 0009). `runtimeTag`: the bundled llama.cpp tag
+    /// artifacts must list in `runtimeTags`.
     public init(host: any RuntimeHost = SystemRuntimeHost(), helperURL: URL? = RuntimeManager.bundledHelperURL,
                 guardURL: URL? = RuntimeManager.bundledGuardURL,
                 modelsDirectory: URL = RuntimeManager.defaultModelsDirectory,
+                modelStore: ModelStore? = nil, runtimeTag: String? = RuntimeManager.bundledRuntimeTag,
                 pollInterval: Duration = .milliseconds(250), stopGrace: Duration = .seconds(5)) {
         self.host = host; self.helperURL = helperURL; self.guardURL = guardURL; self.modelsDirectory = modelsDirectory
+        self.modelStore = modelStore; self.runtimeTag = runtimeTag
         self.pollInterval = pollInterval; self.stopGrace = stopGrace
+    }
+
+    /// The pinned llama.cpp tag embedded by scripts/package-app.sh (`Contents/Resources/Runtime/runtime.lock.json`).
+    public static var bundledRuntimeTag: String? {
+        let url = Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/Runtime/runtime.lock.json")
+        guard let data = try? Data(contentsOf: url),
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        return object["tag"] as? String
     }
 
     /// `Contents/Helpers/llama-server` inside the packaged app, or nil (SwiftPM runs, runtime not fetched).
@@ -134,9 +148,10 @@ public actor RuntimeManager {
     // MARK: Public lifecycle
 
     /// Returns a verified endpoint and takes a lease. Call `release()` after each inference call.
-    public func acquire(provider: ProviderSpec, model: ModelSpec) async throws -> RuntimeEndpoint {
+    /// `artifact`: the provider's catalog entry (`AgentConfiguration.artifact(for:)`) when `runtime.artifact` is set.
+    public func acquire(provider: ProviderSpec, model: ModelSpec, artifact: ModelArtifact? = nil) async throws -> RuntimeEndpoint {
         let settings: RuntimeLaunchSettings
-        do { settings = try launchSettings(provider: provider, model: model) }
+        do { settings = try await launchSettings(provider: provider, model: model, artifact: artifact) }
         catch {
             if current == nil, starting == nil { publish(.failed(error.localizedDescription)) }
             throw error
@@ -171,7 +186,7 @@ public actor RuntimeManager {
 
     // MARK: Internals (internal for tests)
 
-    func launchSettings(provider: ProviderSpec, model: ModelSpec) throws -> RuntimeLaunchSettings {
+    func launchSettings(provider: ProviderSpec, model: ModelSpec, artifact: ModelArtifact? = nil) async throws -> RuntimeLaunchSettings {
         guard provider.kind == .managed, let spec = provider.runtime, model.providerID == provider.id else {
             throw AgentError.rejected("This model does not use the bundled local runtime.")
         }
@@ -179,10 +194,26 @@ public actor RuntimeManager {
         guard let helperURL else {
             throw AgentError.rejected("This build does not include the bundled local runtime.")
         }
-        let modelPath = modelsDirectory.appendingPathComponent(spec.modelFile, isDirectory: false)
-        var isDirectory: ObjCBool = false
-        guard FileManager.default.fileExists(atPath: modelPath.path, isDirectory: &isDirectory), !isDirectory.boolValue else {
-            throw AgentError.rejected("Model file \(spec.modelFile) is not in the Models folder.")
+        let modelPath: URL
+        if let artifactID = spec.artifact {
+            // Verified path (ADR 0009): the catalog entry, qualified for this runtime, hash-verified on disk.
+            guard let artifact, artifact.id == artifactID else {
+                throw AgentError.rejected("The approved model artifact \(artifactID) is not in the model catalog.")
+            }
+            guard let runtimeTag, artifact.runtimeTags.contains(runtimeTag) else {
+                throw AgentError.rejected("\(artifact.displayName) is not approved for the bundled runtime \(runtimeTag ?? "(unknown)").")
+            }
+            guard let modelStore else { throw AgentError.rejected("Model verification is unavailable.") }
+            modelPath = try await modelStore.verifiedURL(for: artifact)
+        } else if let modelFile = spec.modelFile {
+            // Legacy unverified file name (ADR 0008).
+            modelPath = modelsDirectory.appendingPathComponent(modelFile, isDirectory: false)
+            var isDirectory: ObjCBool = false
+            guard FileManager.default.fileExists(atPath: modelPath.path, isDirectory: &isDirectory), !isDirectory.boolValue else {
+                throw AgentError.rejected("Model file \(modelFile) is not in the Models folder.")
+            }
+        } else {
+            throw AgentError.rejected("Managed runtime needs exactly one of artifact or modelFile.")
         }
         let idle = spec.effectiveIdleUnloadSeconds
         return RuntimeLaunchSettings(helper: helperURL, modelPath: modelPath, alias: model.model,
@@ -399,12 +430,21 @@ private final class QuitHandle: @unchecked Sendable {
 public struct ManagedInferenceClient: InferenceClient {
     private let runtime: RuntimeManager
     private let provider: ProviderSpec
-    public init(runtime: RuntimeManager, provider: ProviderSpec) { self.runtime = runtime; self.provider = provider }
+    private let artifact: ModelArtifact?
+    /// `artifact`: `configuration.artifact(for: provider)`; required when the provider's runtime names an artifact.
+    public init(runtime: RuntimeManager, provider: ProviderSpec, artifact: ModelArtifact? = nil) {
+        self.runtime = runtime; self.provider = provider; self.artifact = artifact
+    }
     public func complete(messages: [ChatMessage], tools: [FunctionTool], model: ModelSpec, limits: RunLimits) async throws -> ChatMessage {
-        let endpoint = try await runtime.acquire(provider: provider, model: model)
+        try await completeMeasured(messages: messages, tools: tools, model: model, limits: limits).message
+    }
+    /// Same as `complete`, plus content-free token counts and server timings when the runtime reports them.
+    public func completeMeasured(messages: [ChatMessage], tools: [FunctionTool], model: ModelSpec,
+                                 limits: RunLimits) async throws -> (message: ChatMessage, metrics: CompletionMetrics?) {
+        let endpoint = try await runtime.acquire(provider: provider, model: model, artifact: artifact)
         do {
             let reply = try await CompatibleInferenceClient(endpoint: endpoint)
-                .complete(messages: messages, tools: tools, model: model, limits: limits)
+                .completeMeasured(messages: messages, tools: tools, model: model, limits: limits)
             await runtime.release()
             return reply
         } catch {
