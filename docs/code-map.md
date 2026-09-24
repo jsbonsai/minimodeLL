@@ -40,7 +40,7 @@
 
 ## Runtime guard (`Sources/RuntimeGuard/main.swift`)
 
-`minimodell-runtime-guard <llama-server> [args…]`: posix_spawns the server with the inherited environment, forwards SIGTERM/SIGINT/SIGHUP, stops the server (SIGTERM, SIGKILL after 3 s) when re-parented because the app died, and exits with the server's status. No logging. Embedded only when the runtime is fetched.
+`minimodell-runtime-guard <llama-server> [args…]`: posix_spawns the server with the inherited environment, forwards SIGTERM/SIGINT/SIGHUP and escalates to SIGKILL after 3 s, stops the server the same way when re-parented because the app died, and exits with the server status (128 + signal when signalled). No logging. Embedded only when the runtime is fetched.
 - `BrowserAuthorization.swift`: retains ASWebAuthenticationSession and checked continuation, validates callback scheme/host, handles cancellation. SDK remains responsible for PKCE/state/protocol verification.
 
 `BrandAssets.swift`, `MinimodeMark.swift` and `Resources/BrandAssets/` implement the supplied visual identity. See `docs/branding.md` for source mapping and `scripts/sync-brand-assets.py` for repeatable resource updates. Brand fonts are registered only in the app process.

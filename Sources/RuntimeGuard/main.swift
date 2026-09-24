@@ -17,23 +17,25 @@ var serverPID: pid_t = 0
 var argv: [UnsafeMutablePointer<CChar>?] = arguments.dropFirst().map { strdup($0) } + [nil]
 guard posix_spawn(&serverPID, arguments[1], nil, nil, &argv, environ) == 0 else { exit(70) }
 
-// Forward termination requests. Handlers only call async-signal-safe kill().
+// Forward termination requests. Handlers only call async-signal-safe kill() and set a flag.
 nonisolated(unsafe) var forwardTarget: pid_t = serverPID
+nonisolated(unsafe) var stopRequested: sig_atomic_t = 0
 for sig in [SIGTERM, SIGINT, SIGHUP] {
-    signal(sig) { received in if forwardTarget > 0 { kill(forwardTarget, received) } }
+    signal(sig) { received in stopRequested = 1; if forwardTarget > 0 { kill(forwardTarget, received) } }
 }
 
 var status: Int32 = 0
-var parentGoneSince: Int = -1
+var stoppingSince: Int = -1
 var ticks = 0
 while true {
     let result = waitpid(serverPID, &status, WNOHANG)
     if result == serverPID { break }
     if result < 0 && errno != EINTR { exit(71) }
-    // App gone (we were re-parented): ask the server to stop, then force it after 3 seconds.
-    if getppid() != appPID {
-        if parentGoneSince < 0 { parentGoneSince = ticks; kill(serverPID, SIGTERM) }
-        else if ticks - parentGoneSince >= 30 { kill(serverPID, SIGKILL) }
+    // App gone (we were re-parented) or stop requested: SIGTERM the server, SIGKILL it after 3 seconds.
+    // The app's own grace period is longer, so the guard normally exits before the app escalates to it.
+    if getppid() != appPID || stopRequested != 0 {
+        if stoppingSince < 0 { stoppingSince = ticks; kill(serverPID, SIGTERM) }
+        else if ticks - stoppingSince >= 30 { kill(serverPID, SIGKILL) }
     }
     usleep(100_000)
     ticks += 1
