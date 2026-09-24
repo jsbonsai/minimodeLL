@@ -30,13 +30,42 @@ Provider, model and MCP server IDs must each be unique within their collection a
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `id` | yes | Reference used by model stubs |
-| `kind` | yes | `local` or `litellm` |
-| `baseURL` | yes | API base, normally ending in `/v1`; app appends `chat/completions` |
-| `credentialAccount` | no | Keychain account for a bearer token |
+| `kind` | yes | `local`, `litellm` or `managed` |
+| `baseURL` | `local`/`litellm` only | API base, normally ending in `/v1`; app appends `chat/completions`. Must be absent for `managed` |
+| `credentialAccount` | no | Keychain account for a bearer token. Must be absent for `managed` |
+| `runtime` | `managed` only | App-owned bundled runtime settings (below). Must be absent for `local`/`litellm` |
+
+`local` means an externally started loopback server that the app does not own. `managed` means the app launches, verifies, unloads and stops its own bundled `llama-server` (ADR 0008).
 
 Local URLs must use HTTP and a literal loopback host (`127.0.0.1` or IPv6 loopback). `localhost` is intentionally rejected by current validation. Remote providers require HTTPS. Credentials in the URL, query strings and fragments are rejected for all configured endpoints. The inference client rejects redirects and requires HTTP 200.
 
-A missing configured credential fails the run. Omitting `credentialAccount` sends no bearer header. This is useful for development but is not the planned authentication model for a bundled runtime. Selecting a LiteLLM model is explicit; there is no local-to-cloud fallback.
+A missing configured credential fails the run. Omitting `credentialAccount` sends no bearer header. This is useful for development with an external server; the `managed` runtime instead uses a random per-launch key that is never configured or stored. Selecting a LiteLLM model is explicit; there is no local-to-cloud fallback.
+
+### Managed runtime object (`runtime`)
+
+| Field | Required | Default | Accepted | Meaning |
+| --- | --- | --- | --- | --- |
+| `modelFile` | yes | — | `^[A-Za-z0-9][A-Za-z0-9._-]{0,127}\.gguf$`, no `..` | GGUF file name inside the app's `Models` folder. Not a path |
+| `parallel` | no | 1 | 1–4 | llama-server `--parallel` slots |
+| `startupTimeoutSeconds` | no | 120 | 5–600 | Time allowed for authenticated readiness before `failed` |
+| `idleUnloadSeconds` | no | 900 | 0 or 60–86,400 | Stop the runtime after this long with no inference in progress; 0 never unloads |
+
+Rules and behavior:
+
+- Exactly one model stub must reference a `managed` provider. Its `model` value becomes the server `--alias`; `contextTokens × parallel` becomes `--ctx-size`, so each slot receives the stub's `contextTokens`. `minimumMemoryGB` is enforced as for `local`.
+- The `Models` folder is `<Application Support>/<bundle id>/Models`. For the packaged, sandboxed app that is `~/Library/Containers/org.minimodell.agent/Data/Library/Application Support/org.minimodell.agent/Models/`. A symlink to a file outside the container is not readable by the sandboxed helper (verified). User-selected imports, hashes and catalogs are WORK-002.
+- The runtime requires a packaged app built after `scripts/fetch-runtime.sh`. `swift run minimodell` has no bundled helper, so a `managed` model fails with "This build does not include the bundled local runtime."
+- The runtime starts lazily on the first inference call of a task; startup time counts against `limits.timeoutSeconds`. A crash or failed readiness surfaces as a task error and a UI state. There is no automatic restart in the background and never a cloud fallback.
+- Changing `modelFile`, `parallel`, `contextTokens` or `model` restarts the runtime at the next task. Removing every `managed` provider stops it at the next reload.
+
+Example (`Config/bundled-runtime.example.json`):
+
+```json
+{"id": "bundled", "kind": "managed",
+ "runtime": {"modelFile": "approved-model.gguf", "parallel": 1, "startupTimeoutSeconds": 120, "idleUnloadSeconds": 900}}
+```
+
+Migration: schema version stays `1`. Existing configurations are unchanged and still valid; `baseURL` became optional only for the new `managed` kind. Older app builds reject a policy that contains `"kind": "managed"` (unknown enum value), so do not push a managed provider through MDM to Macs running a build without this change. Forced managed policy may use `managed` like any other provider; users cannot add one to a forced policy.
 
 ## Model object
 
@@ -94,6 +123,7 @@ The inference response has a separate fixed 262,144-byte transport cap. MCP buff
 
 ```sh
 swift run minimodell-diagnostics --config Config/enterprise.example.json
+swift run minimodell-diagnostics --config Config/bundled-runtime.example.json
 scripts/make-profile.py Config/enterprise.example.json build/minimodell.mobileconfig
 plutil -lint build/minimodell.mobileconfig
 ```

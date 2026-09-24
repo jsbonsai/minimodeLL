@@ -26,7 +26,7 @@ public struct TaskRunner: Sendable {
               input.utf8.count <= configuration.limits.inputBytes else {
             throw AgentError.rejected("Keep the request within \(configuration.limits.inputBytes) UTF-8 bytes.")
         }
-        if provider.kind == .local {
+        if provider.kind.isOnDevice {
             let memory = ProcessInfo.processInfo.physicalMemory / 1_073_741_824
             guard memory >= model.minimumMemoryGB else { throw AgentError.rejected("This model requires more system memory.") }
         }

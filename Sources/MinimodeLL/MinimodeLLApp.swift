@@ -4,7 +4,10 @@ import LocalAgentCore
 @main
 struct MinimodeLLApp: App {
     @State private var state = AppState()
-    init() { BrandAssets.registerFonts() }
+    init() {
+        if CommandLine.arguments.contains("--runtime-smoke-test") { RuntimeSmokeCommand.runAndExit() }
+        BrandAssets.registerFonts()
+    }
     var body: some Scene {
         WindowGroup(Brand.displayName, id: "workspace") {
             WorkspaceView(state: state).tint(.mmAccent).font(.custom("Geist-Regular", size: 13))
@@ -19,6 +22,34 @@ struct MinimodeLLApp: App {
         Settings { SettingsView(state: state).tint(.mmAccent).frame(width: 720, height: 560) }
     }
 }
+/// `minimodell --runtime-smoke-test [--hold N]`: exercises the bundled runtime under the app's own
+/// sandbox with the resolved policy and a fixed synthetic prompt, prints a content-free JSON report,
+/// and exits before any window is shown. Exit status 0 only on success.
+enum RuntimeSmokeCommand {
+    static func runAndExit() -> Never {
+        let arguments = CommandLine.arguments
+        let hold = arguments.firstIndex(of: "--hold").flatMap { arguments.indices.contains($0 + 1) ? Int(arguments[$0 + 1]) : nil } ?? 0
+        let done = DispatchSemaphore(value: 0)
+        let box = ReportBox()
+        Task.detached {
+            let report: RuntimeSmokeTest.Report
+            do {
+                let snapshot = try ConfigurationLoader.load()
+                report = await RuntimeSmokeTest.run(configuration: snapshot.configuration, runtime: RuntimeManager(), holdSeconds: hold)
+            } catch {
+                var failed = RuntimeSmokeTest.Report(); failed.failure = "Configuration could not be loaded."
+                report = failed
+            }
+            box.report = report
+            done.signal()
+        }
+        done.wait()
+        let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        if let report = box.report, let data = try? encoder.encode(report) { print(String(decoding: data, as: UTF8.self)) }
+        exit(box.report?.ok == true ? 0 : 1)
+    }
+}
+private final class ReportBox: @unchecked Sendable { var report: RuntimeSmokeTest.Report? }
 struct MenuContent: View {
     @Bindable var state: AppState
     @Environment(\.openWindow) private var openWindow
@@ -27,8 +58,10 @@ struct MenuContent: View {
         Button("Open \(Brand.displayName)") {
             openWindow(id: "workspace"); NSApp.activate(ignoringOtherApps: true)
         }
+        if state.usesManagedRuntime || state.runtimeState != .stopped { Text(state.runtimeState.summary) }
         SettingsLink()
         if state.busy { Button("Stop task") { state.cancel() } }
+        if !state.busy, state.runtimeState == .ready { Button("Unload local model") { state.stopRuntime() } }
         Divider()
         Button("Quit") { state.cancel(); NSApp.terminate(nil) }.keyboardShortcut("q")
     }
@@ -77,6 +110,7 @@ struct WorkspaceView: View {
                 Label(state.provider?.kind == .litellm ? "Cloud inference through your LiteLLM gateway" : "Local inference · tools connect to remote services",
                       systemImage: state.provider?.kind == .litellm ? "cloud" : "desktopcomputer")
                     .font(.caption).foregroundStyle(.secondary)
+                if state.usesManagedRuntime { RuntimeStatus(runtime: state.runtimeState) }
                 TextEditor(text: $state.input)
                     .font(.body).scrollContentBackground(.hidden).padding(10)
                     .frame(height: 100).background(.background, in: RoundedRectangle(cornerRadius: 10))
@@ -162,5 +196,23 @@ struct SettingsView: View {
                 Spacer()
             }.padding(24).tabItem { Label("Audit", systemImage: "list.bullet.rectangle") }
         }
+    }
+}
+/// Minimal readiness indicator for the app-owned local runtime. Content-free: state and reason only.
+struct RuntimeStatus: View {
+    let runtime: RuntimeState
+    var body: some View {
+        HStack(spacing: 6) {
+            switch runtime {
+            case .starting, .stopping: ProgressView().controlSize(.mini)
+            case .ready: Image(systemName: "circle.fill").foregroundStyle(.green)
+            case .failed: Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+            case .stopped: Image(systemName: "circle").foregroundStyle(.secondary)
+            }
+            Text(runtime == .stopped ? "Local model starts with your next task" : runtime.summary)
+                .lineLimit(2)
+        }
+        .font(.caption).foregroundStyle(.secondary)
+        .accessibilityElement(children: .combine)
     }
 }

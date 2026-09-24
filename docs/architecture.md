@@ -15,14 +15,39 @@ flowchart TD
     Runner --> Budget[Context and execution budgets]
     Runner --> Audit[Metadata audit]
     Runner --> Inference[Inference interface]
-    Inference --> Local[Loopback llama-server]
+    Inference --> Local[External loopback llama-server]
     Inference --> Cloud[HTTPS LiteLLM gateway]
+    Inference --> Manager[Runtime manager]
+    Manager --> Guard[Runtime guard helper]
+    Guard --> Bundled[Bundled llama-server, random loopback port + per-launch key]
     Runner --> MCP[Official Swift MCP SDK]
     MCP --> Services[Approved HTTPS MCP services]
     Keychain[Keychain and browser OAuth] --> MCP
 ```
 
-A fresh app avoids inheriting Llama-macOS's arbitrary model installation, network exposure settings, and local overrides. llama.cpp remains the planned runtime. A supported deployment will pin the runtime revision, model hash, quantization, template, and context limit together.
+A fresh app avoids inheriting Llama-macOS's arbitrary model installation, network exposure settings, and local overrides. llama.cpp is the runtime. The runtime revision is now pinned (`packaging/runtime.lock.json`, ADR 0008); a supported deployment must still pin model hash, quantization, template, and context limit together (WORK-002).
+
+## Bundled runtime lifecycle (ADR 0008)
+
+A `managed` provider makes the app own a bundled `llama-server`:
+
+```mermaid
+stateDiagram-v2
+    [*] --> stopped
+    stopped --> starting: first inference call (acquire)
+    starting --> ready: /health 200, then key challenge passes
+    starting --> failed: timeout / child exit / verification failure
+    ready --> stopping: idle unload, policy change, Unload, app quit
+    ready --> failed: child exits unexpectedly
+    stopping --> stopped
+    failed --> starting: next user-submitted task
+```
+
+- `RuntimeManager` (actor, `Runtime.swift`) chooses a free 127.0.0.1 port, creates a 256-bit key, and launches `Contents/Helpers/minimodell-runtime-guard <llama-server> --model … --host 127.0.0.1 --port N --alias … --ctx-size … --parallel … --no-webui --offline --no-slots --log-disable` with an explicit environment containing `LLAMA_API_KEY`. Child output is discarded.
+- Readiness: poll `/health` (public) until the configured timeout, then require the child alive, 401 for no key and for a random decoy key, 200 for the real key with the expected alias and sufficient `n_ctx`. The challenge stands in for socket-ownership checks, which App Sandbox denies.
+- `ManagedInferenceClient` acquires a lease per inference call and releases it afterwards; idle unload only runs with zero leases. A child exit maps to `failed(reason)` and the task error shows that reason. No background restart, no cloud fallback.
+- The guard forwards termination signals and stops the server if the app disappears, so a crashed or force-killed app does not leave a model resident in memory.
+- `minimodell --runtime-smoke-test [--hold N]` runs the same path with a fixed synthetic prompt inside the packaged app's sandbox and prints a content-free JSON report (timings, byte counts, state).
 
 ## Provider and catalog design
 
@@ -56,4 +81,6 @@ JSONL entries contain timestamp, run ID, event category, model ID and optional c
 
 ## Packaging and sandbox
 
-The packaged app enables App Sandbox, outbound network access, and Hardened Runtime. Development execution through SwiftPM is not sandboxed. Diagnostics is a separate read-only CLI so an MDM policy can invoke it without launching a user's UI. The current app talks to an external inference server; runtime sandbox inheritance, signed helper embedding, model file access, local authentication, lifecycle and memory-pressure controls are release gates.
+The packaged app enables App Sandbox, outbound network access, loopback listening (`network.server`, needed by the inheriting runtime helper), and Hardened Runtime. Development execution through SwiftPM is not sandboxed and has no bundled runtime. Diagnostics is a separate read-only CLI so an MDM policy can invoke it without launching a user's UI.
+
+When `scripts/fetch-runtime.sh` has run, `scripts/package-app.sh` embeds `llama-server` and the guard in `Contents/Helpers/`, the llama.cpp dylibs in `Contents/Frameworks/` (helper rpath rewritten to `@executable_path/../Frameworks`), the upstream MIT license, and the lock file in `Contents/Resources/Runtime/`. Nested code is signed inside-out; both helpers carry only `app-sandbox` + `inherit`. Ad-hoc builds sign `llama-server` without hardened runtime because library validation rejects ad-hoc dylibs (different Team IDs); a real Developer ID keeps it on (unvalidated). Sandbox inheritance, loopback-only binding, authentication, file-access confinement and orphan cleanup were verified live on the packaged app (see validation results). Developer ID/notarization, memory-pressure controls, hung-inference cancellation and a qualified model remain release gates.
