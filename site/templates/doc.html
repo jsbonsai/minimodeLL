@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{TITLE}} — {{NAME}} docs</title>
+  <meta name="description" content="{{PAGE_DESCRIPTION}}">
+  <link rel="canonical" href="{{CANONICAL}}">
+  <link rel="icon" href="{{ROOT}}assets/favicon.ico" sizes="32x32">
+  <link rel="icon" href="{{ROOT}}assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ROOT}}assets/apple-touch-icon.png">
+  <meta name="theme-color" content="#F2F3EF" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#16181D" media="(prefers-color-scheme: dark)">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="{{NAME}}">
+  <meta property="og:title" content="{{TITLE}} — {{NAME}} docs">
+  <meta property="og:description" content="{{PAGE_DESCRIPTION}}">
+  <meta property="og:url" content="{{CANONICAL}}">
+  <meta property="og:image" content="{{SITE_URL}}assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="{{SITE_URL}}assets/og-image.png">
+  <link rel="stylesheet" href="{{ROOT}}assets/styles.css">
+  <script>
+    try { var t = localStorage.getItem("mm-theme"); if (t === "dark" || t === "light") { document.documentElement.setAttribute("data-theme", t); } } catch (e) {}
+  </script>
+</head>
+<body>
+{{NAV}}
+<main id="main">
+  <div class="container docs-shell">
+    <aside class="docs-sidebar" aria-label="Documentation">
+      <details class="docs-toggle">
+        <summary>Documentation
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </summary>
+        {{SIDEBAR}}
+      </details>
+      <div class="docs-sidebar-static">
+        {{SIDEBAR}}
+      </div>
+    </aside>
+    <article class="prose" id="content">
+      <div class="doc-meta">
+        <span>Rendered from <code>{{SOURCE}}</code></span>
+        <a href="{{EDIT_URL}}" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1-4 11-11 3 3-11 11z"/></svg>
+          Edit this page on GitHub</a>
+      </div>
+      {{CONTENT}}
+    </article>
+  </div>
+</main>
+{{FOOTER}}
+</body>
+</html>

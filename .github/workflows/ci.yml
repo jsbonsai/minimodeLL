@@ -1,9 +1,9 @@
 name: macOS validation
 on:
   push:
-    paths-ignore: ['**/*.md']
+    paths-ignore: ['**/*.md', 'site/**', '.github/workflows/pages.yml']
   pull_request:
-    paths-ignore: ['**/*.md']
+    paths-ignore: ['**/*.md', 'site/**', '.github/workflows/pages.yml']
 permissions:
   contents: read
 jobs:

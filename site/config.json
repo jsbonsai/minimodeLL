@@ -1,0 +1,63 @@
+{
+  "siteUrl": "https://jsbonsai.github.io/minimodeLL/",
+  "repoUrl": "https://github.com/jsbonsai/minimodeLL",
+  "defaultBranch": "main",
+  "tagline": "Local models. MCP tools. Managed by IT.",
+  "description": "minimodeLL is a native macOS menu bar assistant for small workplace tasks: approved local models, allowlisted MCP tools, human approval, content-free audit, and IT-governable policy through Jamf or Iru (formerly Kandji). No silent cloud fallback.",
+  "brandingJson": "Sources/LocalAgentCore/Resources/Branding.json",
+  "docs": [
+    {
+      "group": "Start here",
+      "pages": [
+        {"source": "docs/README.md", "slug": "index", "title": "Documentation map"},
+        {"source": "docs/development.md", "slug": "development", "title": "Development runbook"},
+        {"source": "docs/architecture.md", "slug": "architecture", "title": "Architecture"},
+        {"source": "docs/configuration-reference.md", "slug": "configuration-reference", "title": "Configuration reference"},
+        {"source": "docs/code-map.md", "slug": "code-map", "title": "Code map"}
+      ]
+    },
+    {
+      "group": "Deploy and govern",
+      "pages": [
+        {"source": "docs/deployment.md", "slug": "deployment", "title": "Deployment"},
+        {"source": "docs/jamf-test-plan.md", "slug": "jamf-test-plan", "title": "Jamf sandbox test plan"},
+        {"source": "docs/kandji.md", "slug": "kandji", "title": "Iru (formerly Kandji)"},
+        {"source": "SECURITY.md", "slug": "security", "title": "Security"}
+      ]
+    },
+    {
+      "group": "Evidence",
+      "pages": [
+        {"source": "docs/validation.md", "slug": "validation", "title": "Validation plan"},
+        {"source": "docs/validation-results.md", "slug": "validation-results", "title": "Validation results"},
+        {"source": "docs/project-state.md", "slug": "project-state", "title": "Project state"}
+      ]
+    },
+    {
+      "group": "Decisions",
+      "pages": [
+        {"source": "docs/decisions/README.md", "slug": "decisions/index", "title": "Decision records"},
+        {"source": "docs/decisions/0001-native-app-and-core.md", "slug": "decisions/0001-native-app-and-core", "title": "0001 Native app and core"},
+        {"source": "docs/decisions/0002-optional-managed-policy.md", "slug": "decisions/0002-optional-managed-policy", "title": "0002 Optional managed policy"},
+        {"source": "docs/decisions/0003-explicit-inference-providers.md", "slug": "decisions/0003-explicit-inference-providers", "title": "0003 Explicit inference providers"},
+        {"source": "docs/decisions/0004-bounded-task-execution.md", "slug": "decisions/0004-bounded-task-execution", "title": "0004 Bounded task execution"},
+        {"source": "docs/decisions/0005-mcp-and-native-oauth.md", "slug": "decisions/0005-mcp-and-native-oauth", "title": "0005 MCP and native OAuth"},
+        {"source": "docs/decisions/0006-audit-and-validation.md", "slug": "decisions/0006-audit-and-validation", "title": "0006 Audit and validation"},
+        {"source": "docs/decisions/0007-branding-and-distribution.md", "slug": "decisions/0007-branding-and-distribution", "title": "0007 Branding and distribution"},
+        {"source": "docs/decisions/0008-bundled-runtime-lifecycle.md", "slug": "decisions/0008-bundled-runtime-lifecycle", "title": "0008 Bundled runtime lifecycle"},
+        {"source": "docs/decisions/0009-model-artifact-manifest.md", "slug": "decisions/0009-model-artifact-manifest", "title": "0009 Model artifact manifest"},
+        {"source": "docs/decisions/0010-static-site-generation.md", "slug": "decisions/0010-static-site-generation", "title": "0010 Static site generation"}
+      ]
+    },
+    {
+      "group": "Project",
+      "pages": [
+        {"source": "docs/roadmap.md", "slug": "roadmap", "title": "Roadmap"},
+        {"source": "docs/branding.md", "slug": "branding", "title": "Brand integration"},
+        {"source": "CONTRIBUTING.md", "slug": "contributing", "title": "Contributing"},
+        {"source": "CHANGELOG.md", "slug": "changelog", "title": "Changelog"},
+        {"source": "docs/website-plan.md", "slug": "website-plan", "title": "Website plan"}
+      ]
+    }
+  ]
+}

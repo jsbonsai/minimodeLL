@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Page not found — {{NAME}}</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="{{ROOT}}assets/favicon.ico" sizes="32x32">
+  <link rel="icon" href="{{ROOT}}assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ROOT}}assets/apple-touch-icon.png">
+  <meta name="theme-color" content="#F2F3EF" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#16181D" media="(prefers-color-scheme: dark)">
+  <link rel="stylesheet" href="{{ROOT}}assets/styles.css">
+  <script>
+    try { var t = localStorage.getItem("mm-theme"); if (t === "dark" || t === "light") { document.documentElement.setAttribute("data-theme", t); } } catch (e) {}
+  </script>
+</head>
+<body>
+{{NAV}}
+<main id="main">
+  <section class="container notfound">
+    <div>
+      <svg class="mark" viewBox="5.24 2.74 54.52 54.52" aria-hidden="true" focusable="false"><path class="stroke" d="M14 10V50H40" fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path class="stroke" d="M27 10V37H50" fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><circle class="dot" cx="49" cy="15" r="5.5"/></svg>
+      <p class="eyebrow">404</p>
+      <h1>That page is not in the allowlist.</h1>
+      <p>The address may have changed, or the document it pointed to has moved into the repository.</p>
+      <div class="cta">
+        <a class="btn btn-primary" href="{{ROOT}}">Back to the start</a>
+        <a class="btn btn-secondary" href="{{ROOT}}docs/">Browse the docs</a>
+        <a class="btn btn-secondary" href="{{REPO_URL}}" rel="noopener">Open the repository</a>
+      </div>
+    </div>
+  </section>
+</main>
+{{FOOTER}}
+</body>
+</html>

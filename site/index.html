@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{NAME}} — Local models. MCP tools. Managed by IT.</title>
+  <meta name="description" content="{{DESCRIPTION}}">
+  <link rel="canonical" href="{{SITE_URL}}">
+  <link rel="icon" href="{{ROOT}}assets/favicon.ico" sizes="32x32">
+  <link rel="icon" href="{{ROOT}}assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ROOT}}assets/apple-touch-icon.png">
+  <link rel="manifest" href="{{ROOT}}site.webmanifest">
+  <meta name="theme-color" content="#F2F3EF" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#16181D" media="(prefers-color-scheme: dark)">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{NAME}}">
+  <meta property="og:title" content="{{NAME}} — Local models. MCP tools. Managed by IT.">
+  <meta property="og:description" content="{{DESCRIPTION}}">
+  <meta property="og:url" content="{{SITE_URL}}">
+  <meta property="og:image" content="{{SITE_URL}}assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="{{NAME}} wordmark: local models, managed from the menu bar.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{NAME}} — Local models. MCP tools. Managed by IT.">
+  <meta name="twitter:description" content="{{DESCRIPTION}}">
+  <meta name="twitter:image" content="{{SITE_URL}}assets/og-image.png">
+  <link rel="stylesheet" href="{{ROOT}}assets/styles.css">
+  <script>
+    // Apply a stored theme before first paint to avoid a flash. Falls back to the system scheme.
+    try { var t = localStorage.getItem("mm-theme"); if (t === "dark" || t === "light") { document.documentElement.setAttribute("data-theme", t); } } catch (e) {}
+  </script>
+</head>
+<body>
+{{NAV}}
+<main id="main">
+
+  <!-- ===================== HERO ===================== -->
+  <section class="hero" aria-labelledby="hero-title">
+    <div class="container">
+      <div>
+        <p class="eyebrow accent reveal">Developer preview {{VERSION}} · macOS 14+ · Apple Silicon</p>
+        <h1 id="hero-title" class="reveal" data-delay="1">Local models.<br>MCP tools.<br>Managed by <span class="accent">IT</span>.</h1>
+        <p class="lede reveal" data-delay="2">{{NAME}} is a native menu bar assistant that runs approved local models, calls allowlisted MCP tools only with your explicit OK, and gives IT a policy it can enforce through Jamf or Iru. Every step is bounded and audited without content. There is no silent cloud fallback.</p>
+        <div class="cta reveal" data-delay="3">
+          <a class="btn btn-primary" href="#get-started">Build the preview
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="btn btn-secondary" href="{{ROOT}}docs/">Read the docs</a>
+        </div>
+        <div class="meta reveal" data-delay="3">
+          <span class="pill"><span class="status-dot" aria-hidden="true"></span>Local inference via llama-server</span>
+          <span class="pill">Official MCP Swift SDK</span>
+          <span class="pill">MIT licensed</span>
+        </div>
+      </div>
+
+      <!-- Illustrative task card: a sanitized picture of the approval flow, not a live session. -->
+      <div class="reveal" data-delay="2">
+        <div class="task-card" role="img" aria-label="Illustration of a minimodeLL task: a request is sent to a local model, the model asks to call a calendar tool, the app requires the person to approve it, then the result is returned and audited as metadata.">
+          <div class="bar">
+            <svg class="mark hero-mark" viewBox="5.24 2.74 54.52 54.52" aria-hidden="true"><path class="stroke" d="M14 10V50H40" fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path class="stroke" d="M27 10V37H50" fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><circle class="dot" cx="49" cy="15" r="5.5"/></svg>
+            <span class="title">New task</span>
+            <span class="spacer"></span>
+            <span class="badge">local-model · 127.0.0.1:9931</span>
+          </div>
+          <div class="body">
+            <div class="row">
+              <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1-4 11-11 3 3-11 11z"/></svg></span>
+              <div><div class="label">Request</div><div class="text">Find a 30-minute slot tomorrow that works for the design sync.</div></div>
+            </div>
+            <div class="row">
+              <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6l1 4h4v6h-3v8H7v-8H4V7h4z"/></svg></span>
+              <div><div class="label">Model wants to call a tool</div><div class="text"><code>calendar.find_free_slots</code> on <code>calendar-mcp</code> · allowlisted · requires confirmation</div></div>
+            </div>
+            <div class="approval">
+              <div class="head"><span class="status-dot" aria-hidden="true"></span>Approve this tool call?</div>
+              <pre class="args">{"date": "2026-09-24", "duration_minutes": 30, "attendees": ["design-sync"]}</pre>
+              <div class="actions"><span class="ok">Approve once</span><span>Deny</span></div>
+            </div>
+            <div class="row">
+              <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+              <div><div class="label">Result</div><div class="text">Two options: 10:00–10:30 and 14:30–15:00. Both are free for everyone on the list.</div></div>
+            </div>
+          </div>
+          <div class="footer"><span class="status-dot" aria-hidden="true"></span>audit: run 8f2c… · tool_approved · tool_result · completed · 2 steps · no content stored</div>
+        </div>
+        <p class="caption">Illustrative. Not a live session or a connected calendar.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== WHY ===================== -->
+  <section class="section" id="why" aria-labelledby="why-title">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="eyebrow">Why this exists</p>
+        <h2 id="why-title">Local AI that an IT team can actually say yes to.</h2>
+        <p>Consumer local-model apps let anyone install anything and point it anywhere. Cloud assistants move company context off the machine. {{NAME}} sits in between: small, native, and governable.</p>
+      </div>
+      <div class="pillars">
+        <div class="pillar reveal" data-delay="1">
+          <span class="n">01</span>
+          <h3>Policy is enforced in code, not in a prompt.</h3>
+          <p>Which models, which servers, which tools, and which of those need a human first are all decided by a typed, validated policy the app cannot talk its way around. A system prompt or MCP annotation is never an authorization boundary.</p>
+        </div>
+        <div class="pillar reveal" data-delay="2">
+          <span class="n">02</span>
+          <h3>One task, one bounded run.</h3>
+          <p>Each task starts with a fresh context, one tool call per model response, and hard limits on input, context, output, steps, result size, and wall time. Nothing runs in the background and writes are never retried automatically.</p>
+        </div>
+        <div class="pillar reveal" data-delay="3">
+          <span class="n">03</span>
+          <h3>Useful alone. Governable at fleet scale.</h3>
+          <p>An individual can configure the app themselves. An organization can ship a complete, forced policy through Jamf or Iru (formerly Kandji) that the user cannot extend. Same app, same schema, same validator.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== GOVERNANCE ===================== -->
+  <section class="section" id="governance" aria-labelledby="gov-title">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="eyebrow">Governance</p>
+        <h2 id="gov-title">How policy flows from the MDM to the task.</h2>
+        <p>Policy is resolved again for every submission and captured as one immutable snapshot for the run. Managed policy replaces user configuration entirely; if it is invalid, the app fails closed and blocks requests rather than falling back.</p>
+      </div>
+      <div class="flow">
+        <div class="flow-step reveal" data-delay="1">
+          <span class="n">1</span>
+          <h3>IT publishes a forced policy</h3>
+          <p>A configuration profile delivers <code>PolicyJSON</code> into the <code>org.minimodell.agent</code> managed preference domain. The repo generates the profile from the same JSON the app validates, so what IT scopes is what the app enforces.</p>
+        </div>
+        <div class="flow-step reveal" data-delay="2">
+          <span class="n">2</span>
+          <h3>The app resolves one effective policy</h3>
+          <p>Forced managed policy → user <code>config.json</code> → bundled defaults. First match wins, completely. User settings can never add a model, server, or tool to a managed allowlist.</p>
+        </div>
+        <div class="flow-step reveal" data-delay="3">
+          <span class="n">3</span>
+          <h3>Every step is checked and recorded</h3>
+          <p>Tool calls are validated against a JSON Schema subset and the allowlist, then held for human approval when the policy says so. Each step writes a metadata-only audit event; if the audit write fails, the task halts.</p>
+        </div>
+      </div>
+      <div class="flow-notes">
+        <div class="note reveal" data-delay="1"><p><strong>Approval is about arguments.</strong> The confirmation sheet shows the actual tool arguments, not the model's explanation of them. Set <code>requiresConfirmation: false</code> only for operations you have reviewed as safe.</p></div>
+        <div class="note reveal" data-delay="2"><p><strong>Audit is content-free by design.</strong> JSONL and OSLog carry timestamps, run IDs, event categories, and model, server, and tool IDs. Prompts, responses, tool arguments, results, and tokens are never logged.</p></div>
+        <div class="note reveal" data-delay="3"><p><strong>Cloud only when chosen.</strong> A LiteLLM gateway is an explicit HTTPS provider the policy must list and the UI labels before submission. The app never switches from local to cloud on its own.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== FEATURES ===================== -->
+  <section class="section" id="features" aria-labelledby="feat-title">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="eyebrow">What is in the preview</p>
+        <h2 id="feat-title">The pieces, and where they stand.</h2>
+        <p>Everything below exists in code today. Where a piece is unit tested, fixture tested, or still waiting on live validation is spelled out in the <a href="{{ROOT}}docs/project-state/">project state</a>.</p>
+      </div>
+      <div class="features">
+        <div class="feature reveal" data-delay="1">
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></span>
+          <h3>Approved model catalog</h3>
+          <p>Model stubs name a provider alias plus minimum memory and context length. Local providers must be literal loopback HTTP; remote ones must be HTTPS. Redirects are refused.</p>
+        </div>
+        <div class="feature reveal" data-delay="2">
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg></span>
+          <h3>Allowlisted MCP tools</h3>
+          <p>Exact tool names per server, discovered over Streamable HTTP with the official Swift SDK. Unknown tools, invalid arguments, and unsupported schema keywords are rejected, not ignored.</p>
+        </div>
+        <div class="feature reveal" data-delay="3">
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <h3>Human approval</h3>
+          <p>Per-tool <code>requiresConfirmation</code> is owned by the app's policy. Server annotations do not grant approval. One tool call per model response keeps every decision reviewable.</p>
+        </div>
+        <div class="feature reveal" data-delay="1">
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+          <h3>Bounded execution</h3>
+          <p>Input bytes, a conservative context estimate, output tokens, tool steps, result bytes, and wall time are all capped. A task that will not fit is refused before inference starts.</p>
+        </div>
+        <div class="feature reveal" data-delay="2">
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg></span>
+          <h3>Content-free audit</h3>
+          <p>Bounded JSONL files plus OSLog events with metadata only. Files are private to the user; central collection is a deployment concern, and nothing is uploaded automatically.</p>
+        </div>
+        <div class="feature reveal" data-delay="3">
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8l4 4-4 4M3 12h18"/><path d="M7 4L3 8l4 4" opacity=".35"/></svg></span>
+          <h3>No silent cloud fallback</h3>
+          <p>LiteLLM is a first-class, explicit choice for approved cloud models. It is labeled in the UI, listed in policy, and never used as a backstop when the local server is down.</p>
+        </div>
+        <div class="feature reveal" data-delay="1">
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/></svg></span>
+          <h3>Keychain-only credentials</h3>
+          <p>Gateway tokens and MCP OAuth tokens live in the Keychain, bound to endpoint and client ID. Native browser sign-in uses PKCE; there are no bundled client secrets.</p>
+        </div>
+        <div class="feature reveal" data-delay="2">
+          <span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></span>
+          <h3>Sandboxed native app</h3>
+          <p>SwiftUI, App Sandbox, Hardened Runtime, and a separate read-only diagnostics CLI so an MDM script can validate policy without launching the user's UI.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ARCHITECTURE ===================== -->
+  <section class="section" id="architecture" aria-labelledby="arch-title">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="eyebrow">Architecture</p>
+        <h2 id="arch-title">Three Swift targets. One place where policy lives.</h2>
+        <p><code>LocalAgentCore</code> owns policy, orchestration, providers, credentials, and audit. <code>MinimodeLL</code> is presentation only. <code>AgentDiagnostics</code> validates configuration offline. Jamf and Iru integration is scripts and documentation; there is no MDM API dependency.</p>
+      </div>
+      <div class="arch reveal">
+        <svg viewBox="0 0 920 520" role="img" aria-labelledby="arch-svg-title arch-svg-desc">
+          <title id="arch-svg-title">{{NAME}} architecture</title>
+          <desc id="arch-svg-desc">Managed policy from Jamf or Iru, the user's config.json, and bundled defaults feed a policy resolver inside LocalAgentCore. The resolver hands one immutable snapshot to the task runner, which the SwiftUI app drives and which returns approval prompts and results. The runner enforces budgets, writes metadata-only audit events, and calls an inference client and an MCP client. The inference client talks to a loopback llama-server or an explicit HTTPS LiteLLM gateway. The MCP client talks to approved HTTPS MCP services using tokens from the Keychain.</desc>
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--text-faint)"/></marker>
+            <marker id="arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker>
+            <marker id="arrow-gate" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--warning)"/></marker>
+          </defs>
+
+          <!-- regions -->
+          <rect class="region" x="18" y="60" width="232" height="262" rx="12"/>
+          <text class="region-label" x="30" y="80">POLICY SOURCES</text>
+          <rect class="region" x="256" y="130" width="656" height="272" rx="12"/>
+          <text class="region-label" x="270" y="152">LOCALAGENTCORE</text>
+          <text class="region-label" x="490" y="30">MINIMODELL · SWIFTUI</text>
+          <text class="region-label" x="200" y="438">EXTERNAL PROCESSES AND SERVICES</text>
+
+          <!-- policy sources -->
+          <rect class="box" x="40" y="90" width="190" height="56" rx="8"/>
+          <text class="label" x="135" y="112" text-anchor="middle">Managed policy</text>
+          <text class="sub" x="135" y="130" text-anchor="middle">Jamf / Iru forced PolicyJSON</text>
+          <rect class="box" x="40" y="170" width="190" height="56" rx="8"/>
+          <text class="label" x="135" y="192" text-anchor="middle">User config.json</text>
+          <text class="sub" x="135" y="210" text-anchor="middle">Application Support</text>
+          <rect class="box" x="40" y="250" width="190" height="56" rx="8"/>
+          <text class="label" x="135" y="272" text-anchor="middle">Bundled defaults</text>
+          <text class="sub" x="135" y="290" text-anchor="middle">starter policy</text>
+
+          <!-- UI -->
+          <rect class="box" x="490" y="40" width="190" height="56" rx="8"/>
+          <text class="label" x="585" y="62" text-anchor="middle">Task window</text>
+          <text class="sub" x="585" y="80" text-anchor="middle">menu bar · approvals · OAuth</text>
+
+          <!-- core -->
+          <rect class="box" x="270" y="170" width="190" height="56" rx="8"/>
+          <text class="label" x="365" y="192" text-anchor="middle">Policy resolver</text>
+          <text class="sub" x="365" y="210" text-anchor="middle">first match · fails closed</text>
+
+          <rect class="box core" x="490" y="170" width="190" height="56" rx="8"/>
+          <text class="label" x="585" y="192" text-anchor="middle">Task runner</text>
+          <text class="sub" x="585" y="210" text-anchor="middle">snapshot · one tool per step</text>
+
+          <rect class="box" x="710" y="150" width="190" height="50" rx="8"/>
+          <text class="label" x="805" y="170" text-anchor="middle">Budgets</text>
+          <text class="sub" x="805" y="187" text-anchor="middle">bytes · tokens · steps · time</text>
+
+          <rect class="box" x="710" y="230" width="190" height="50" rx="8"/>
+          <text class="label" x="805" y="250" text-anchor="middle">Audit</text>
+          <text class="sub" x="805" y="267" text-anchor="middle">JSONL + OSLog · metadata only</text>
+
+          <rect class="box" x="270" y="320" width="190" height="56" rx="8"/>
+          <text class="label" x="365" y="342" text-anchor="middle">Inference client</text>
+          <text class="sub" x="365" y="360" text-anchor="middle">HTTP client · no redirects</text>
+
+          <rect class="box" x="490" y="320" width="190" height="56" rx="8"/>
+          <text class="label" x="585" y="342" text-anchor="middle">MCP client</text>
+          <text class="sub" x="585" y="360" text-anchor="middle">SDK 0.12.1 · Streamable HTTP</text>
+
+          <rect class="box" x="710" y="320" width="190" height="56" rx="8"/>
+          <text class="label" x="805" y="342" text-anchor="middle">Keychain</text>
+          <text class="sub" x="805" y="360" text-anchor="middle">tokens · PKCE · no secrets</text>
+
+          <!-- external -->
+          <rect class="box ext" x="200" y="450" width="160" height="50" rx="8"/>
+          <text class="label" x="280" y="470" text-anchor="middle">llama-server</text>
+          <text class="sub" x="280" y="487" text-anchor="middle">127.0.0.1 only</text>
+          <rect class="box ext" x="380" y="450" width="160" height="50" rx="8"/>
+          <text class="label" x="460" y="470" text-anchor="middle">LiteLLM gateway</text>
+          <text class="sub" x="460" y="487" text-anchor="middle">HTTPS · explicit</text>
+          <rect class="box ext" x="600" y="450" width="190" height="50" rx="8"/>
+          <text class="label" x="695" y="470" text-anchor="middle">MCP services</text>
+          <text class="sub" x="695" y="487" text-anchor="middle">HTTPS · allowlisted tools</text>
+
+          <!-- edges: sources -> resolver -->
+          <path class="edge" style="marker-end:none" d="M230 118H255V278H230"/>
+          <path class="edge" d="M230 198H255"/>
+          <path class="edge" d="M255 198H270"/>
+
+          <!-- resolver -> runner -->
+          <path class="edge accent" d="M460 198H490"/>
+
+          <!-- UI <-> runner -->
+          <path class="edge" d="M570 96V170"/>
+          <path class="edge gate" d="M600 170V96"/>
+          <text class="sub" x="558" y="138" text-anchor="end">approve · result</text>
+
+          <!-- runner -> budgets, audit -->
+          <path class="edge" d="M680 188L710 176"/>
+          <path class="edge" d="M680 208L710 250"/>
+
+          <!-- runner -> inference, mcp -->
+          <path class="edge" d="M560 226V280H365V320"/>
+          <path class="edge" d="M585 226V320"/>
+
+          <!-- keychain -> mcp -->
+          <path class="edge" d="M710 348H680"/>
+
+          <!-- clients -> external -->
+          <path class="edge" d="M340 376V410H280V450"/>
+          <path class="edge" d="M390 376V410H460V450"/>
+          <path class="edge" d="M585 376V410H695V450"/>
+
+          <!-- legend -->
+          <line x1="30" y1="508" x2="60" y2="508" stroke="var(--accent)" stroke-width="1.25"/>
+          <text class="legend" x="66" y="512">policy snapshot</text>
+          <line x1="190" y1="508" x2="220" y2="508" stroke="var(--warning)" stroke-width="1.25"/>
+          <text class="legend" x="226" y="512">human approval gate</text>
+          <rect x="370" y="501" width="30" height="14" rx="3" class="box ext"/>
+          <text class="legend" x="406" y="512">outside the sandbox</text>
+        </svg>
+      </div>
+      <p class="arch-caption reveal">The inference runtime is an external process in this preview. Bundling a pinned, signed llama.cpp helper with app-controlled authentication and lifecycle is the next milestone. Read the full <a href="{{ROOT}}docs/architecture/">architecture notes</a> and the <a href="{{ROOT}}docs/decisions/">decision records</a>.</p>
+    </div>
+  </section>
+
+  <!-- ===================== STATUS ===================== -->
+  <section class="section" id="status" aria-labelledby="status-title">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="eyebrow">Status</p>
+        <h2 id="status-title">Honest about where it is.</h2>
+        <p>This is a developer preview. It builds, its safety boundaries are unit tested with deterministic fakes, and the packaged app is sandboxed. Live model quality, enterprise OAuth interoperability, notarization, and enrolled-device MDM behavior are still ahead of it.</p>
+      </div>
+      <div class="status-grid">
+        <div class="status-col reveal" data-delay="1">
+          <h3><span class="status-dot dot-running" aria-hidden="true"></span>Works today</h3>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--running)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg><span><strong>Native app:</strong> task window, menu bar, settings, cancellation, and explicit tool approvals.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--running)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg><span><strong>Providers:</strong> OpenAI-compatible loopback inference and explicit LiteLLM gateway configuration.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--running)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg><span><strong>Bundled runtime:</strong> a pinned, hash-verified llama.cpp server launched by the sandboxed app on a random loopback port with a per-launch key, readiness checks, idle unload, and crash handling. <a href="{{REPO_URL}}/issues/1" rel="noopener">#1</a></span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--running)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg><span><strong>First model:</strong> Qwen3-4B-Instruct-2507 (Q4_K_M, Apache-2.0) downloaded and SHA-256 verified in-app; one live run on an M1 Pro produced ~41 tokens/s and a working synthetic tool call. Not yet a qualified support claim. <a href="{{REPO_URL}}/issues/2" rel="noopener">#2</a></span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--running)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg><span><strong>MCP:</strong> official Swift SDK, Streamable HTTP, tool discovery, native browser OAuth with PKCE, Keychain tokens.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--running)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg><span><strong>Policy:</strong> versioned schema, forced MDM override, fail-closed validation, profile generator, diagnostics CLI.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--running)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg><span><strong>Safeguards:</strong> all execution budgets, schema subset checks, approvals, and content-free audit, covered by deterministic tests in CI.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--running)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg><span><strong>Packaging:</strong> sandboxed, ad-hoc signed <code>.app</code>, plus DMG and PKG build scripts.</span></li>
+          </ul>
+        </div>
+        <div class="status-col reveal" data-delay="2">
+          <h3><span class="status-dot dot-warning" aria-hidden="true"></span>In progress and planned</h3>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/></svg><span><strong>LAN inference servers:</strong> use an OpenAI-compatible server on your network (LM Studio, Ollama) with explicit, labeled trust. <a href="{{REPO_URL}}/issues/21" rel="noopener">#21</a></span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/></svg><span><strong>MCP servers in Settings:</strong> add, edit and remove HTTPS servers with custom headers and auth modes, then a Raycast-inspired redesign. <a href="{{REPO_URL}}/issues/22" rel="noopener">#22</a> <a href="{{REPO_URL}}/issues/10" rel="noopener">#10</a></span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/></svg><span><strong>Live MCP and OAuth qualification</strong> against real baseline services. <a href="{{REPO_URL}}/issues/4" rel="noopener">#4</a></span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/></svg><span><strong>Jamf sandbox validation</strong> of forced policy on an enrolled device is planned with a scoped test plan; nothing is fleet validated yet. <a href="{{REPO_URL}}/issues/6" rel="noopener">#6</a></span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/></svg><span><strong>Iru (formerly Kandji)</strong> is best-effort: the same artifacts and a documented workflow, with no tenant to test against.</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/></svg><span><strong>Production release:</strong> Developer ID signing, notarization, accessibility polish, exact token accounting. <a href="{{ROOT}}docs/roadmap/">Roadmap</a></span></li>
+          </ul>
+        </div>
+      </div>
+      <p class="status-footnote reveal">Every capability claim is tracked in <a href="{{ROOT}}docs/project-state/">project state</a> with its evidence level (implemented, unit tested, fixture tested, live validated, fleet validated), and every check that actually ran is in <a href="{{ROOT}}docs/validation-results/">validation results</a>.</p>
+    </div>
+  </section>
+
+  <!-- ===================== GET STARTED ===================== -->
+  <section class="section" id="get-started" aria-labelledby="start-title">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="eyebrow">Getting started</p>
+        <h2 id="start-title">Build it in three commands.</h2>
+        <p>You need an Apple Silicon Mac, macOS 14 or newer, Xcode 16.4 / Swift 6.1 or newer, and Git. The app needs no Python or Node runtime; packaging and profile scripts use the Python that ships with Xcode's command line tools.</p>
+      </div>
+      <div class="steps">
+        <div class="step reveal" data-delay="1">
+          <h3><span class="n">01</span>Test, package, open</h3>
+          <p>Runs the deterministic core tests, builds a sandboxed, ad-hoc signed <code>.app</code>, and launches it. <code>swift run minimodell</code> is fine for UI work but does not exercise the sandbox.</p>
+<pre class="code"><code>swift test
+scripts/package-app.sh
+open build/minimodeLL.app</code></pre>
+        </div>
+        <div class="step reveal" data-delay="2">
+          <h3><span class="n">02</span>Preview the UI without a model</h3>
+          <p>A labeled fixture answers on the local port with a canned response and makes no outbound requests. Stop it before starting a real server on the same port.</p>
+<pre class="code"><code>python3 scripts/mock-inference.py</code></pre>
+        </div>
+        <div class="step reveal" data-delay="1">
+          <h3><span class="n">03</span>Connect a local model</h3>
+          <p>The preview talks to an existing <code>llama-server</code>; it does not bundle or download a runtime or weights yet. The starter configuration expects the alias <code>local-model</code>.</p>
+<pre class="code"><code>llama-server --model /path/to/approved.gguf --alias local-model <span class="c">\</span>
+  --host 127.0.0.1 --port 9931 --ctx-size 8192 --parallel 1 --jinja</code></pre>
+        </div>
+        <div class="step reveal" data-delay="2">
+          <h3><span class="n">04</span>Validate and ship a policy</h3>
+          <p>The diagnostics CLI validates a policy offline and exits nonzero on failure. The profile generator turns the same JSON into a configuration profile for Jamf or Iru.</p>
+<pre class="code"><code>swift run minimodell-diagnostics --config Config/enterprise.example.json
+scripts/make-profile.py Config/enterprise.example.json build/minimodell.mobileconfig</code></pre>
+        </div>
+      </div>
+      <div class="cta reveal" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:40px">
+        <a class="btn btn-primary" href="{{ROOT}}docs/development/">Development runbook</a>
+        <a class="btn btn-secondary" href="{{ROOT}}docs/configuration-reference/">Configuration reference</a>
+        <a class="btn btn-secondary" href="{{ROOT}}docs/deployment/">Deployment guide</a>
+      </div>
+    </div>
+  </section>
+
+</main>
+{{FOOTER}}
+</body>
+</html>
