@@ -28,7 +28,7 @@ do {
     let memory = ProcessInfo.processInfo.physicalMemory / 1_073_741_824
     let eligible = config.models.filter { model in
         let provider = config.providers.first { $0.id == model.providerID }
-        return provider?.kind == .litellm || model.minimumMemoryGB <= memory
+        return provider?.kind.isOnDevice == false || model.minimumMemoryGB <= memory
     }.map(\.id)
     let report = Report(operatingSystem: ProcessInfo.processInfo.operatingSystemVersionString,
                         architecture: "arm64", memoryGB: memory, configurationValid: true,

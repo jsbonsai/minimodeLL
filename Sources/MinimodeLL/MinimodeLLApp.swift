@@ -27,8 +27,10 @@ struct MenuContent: View {
         Button("Open \(Brand.displayName)") {
             openWindow(id: "workspace"); NSApp.activate(ignoringOtherApps: true)
         }
+        if state.usesManagedRuntime || state.runtimeState != .stopped { Text(state.runtimeState.summary) }
         SettingsLink()
         if state.busy { Button("Stop task") { state.cancel() } }
+        if !state.busy, state.runtimeState == .ready { Button("Unload local model") { state.stopRuntime() } }
         Divider()
         Button("Quit") { state.cancel(); NSApp.terminate(nil) }.keyboardShortcut("q")
     }
@@ -77,6 +79,7 @@ struct WorkspaceView: View {
                 Label(state.provider?.kind == .litellm ? "Cloud inference through your LiteLLM gateway" : "Local inference · tools connect to remote services",
                       systemImage: state.provider?.kind == .litellm ? "cloud" : "desktopcomputer")
                     .font(.caption).foregroundStyle(.secondary)
+                if state.usesManagedRuntime { RuntimeStatus(runtime: state.runtimeState) }
                 TextEditor(text: $state.input)
                     .font(.body).scrollContentBackground(.hidden).padding(10)
                     .frame(height: 100).background(.background, in: RoundedRectangle(cornerRadius: 10))
@@ -162,5 +165,23 @@ struct SettingsView: View {
                 Spacer()
             }.padding(24).tabItem { Label("Audit", systemImage: "list.bullet.rectangle") }
         }
+    }
+}
+/// Minimal readiness indicator for the app-owned local runtime. Content-free: state and reason only.
+struct RuntimeStatus: View {
+    let runtime: RuntimeState
+    var body: some View {
+        HStack(spacing: 6) {
+            switch runtime {
+            case .starting, .stopping: ProgressView().controlSize(.mini)
+            case .ready: Image(systemName: "circle.fill").foregroundStyle(.green)
+            case .failed: Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+            case .stopped: Image(systemName: "circle").foregroundStyle(.secondary)
+            }
+            Text(runtime == .stopped ? "Local model starts with your next task" : runtime.summary)
+                .lineLimit(2)
+        }
+        .font(.caption).foregroundStyle(.secondary)
+        .accessibilityElement(children: .combine)
     }
 }
