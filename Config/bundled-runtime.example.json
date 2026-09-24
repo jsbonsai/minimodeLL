@@ -6,7 +6,7 @@
       "id": "bundled",
       "kind": "managed",
       "runtime": {
-        "modelFile": "approved-model.gguf",
+        "artifact": "qwen3-4b-instruct-2507-q4_k_m",
         "parallel": 1,
         "startupTimeoutSeconds": 120,
         "idleUnloadSeconds": 900
@@ -16,7 +16,7 @@
   "models": [
     {
       "id": "bundled-approved",
-      "title": "Approved local model (bundled runtime)",
+      "title": "Qwen3 4B Instruct (on this Mac)",
       "providerID": "bundled",
       "model": "local-model",
       "minimumMemoryGB": 16,
